@@ -1,0 +1,32 @@
+{
+ "scanned_at": "2026-11-16T17:58:33",
+ "prev_last_id": "0",
+ "last_id": "1571946261735674031",
+ "items": [
+  {
+   "id": "1571946261735674031",
+   "forwarded_at": "2026-11-16T17:53:14.147000+00:00",
+   "original_at": "2026-11-14T13:50:04.372000+00:00",
+   "source": "official Grand Archive Discord",
+   "text": "",
+   "post": false,
+   "kicker": "Spoiler",
+   "images": [
+    "1571946261735674031-1-src.jpg"
+   ],
+   "stories": [
+    "1571946261735674031-1-story.jpg"
+   ],
+   "posts": [],
+   "subtitle": ".asphodel/cantabile · December 11th, 2026",
+   "found_cards": {
+    "1": [
+     1359,
+     181,
+     1845,
+     854
+    ]
+   }
+  }
+ ]
+}
