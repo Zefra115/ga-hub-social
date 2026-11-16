@@ -1,0 +1,98 @@
+{
+ "issue": 1,
+ "season": ".asphodel/paradise",
+ "logo": "assets/brand/logo-GA-HUB.png",
+ "event_bg": "posts/2026-11-16/slide-4.jpg",
+ "scenes": [
+  {
+   "type": "hook",
+   "dur": 3.6,
+   "kicker": "Meta Report #1 · last 15 days",
+   "title": "Fire Umbra Alice almost tripled",
+   "element": "Fire",
+   "from": 1.5,
+   "to": 4.3,
+   "sub": "of the meta · 55.4% win rate",
+   "emoji": "🚀"
+  },
+  {
+   "type": "top3",
+   "dur": 4.2,
+   "kicker": "Most played · last 30 days",
+   "title": "Top 3 archetypes",
+   "rows": [
+    {
+     "name": "Water Fractals Diao Chan",
+     "share": 9.0,
+     "wr": 52.9
+    },
+    {
+     "name": "Wind Crux Spirit Ruler Lorraine",
+     "share": 6.9,
+     "wr": 49.3
+    },
+    {
+     "name": "Fire Coup Ciel",
+     "share": 5.8,
+     "wr": 50.7
+    }
+   ]
+  },
+  {
+   "type": "movers",
+   "dur": 4.2,
+   "kicker": "Last 15 days vs season",
+   "title": "Who's rising?",
+   "up": [
+    {
+     "name": "Fire Umbra Alice",
+     "delta": 2.8
+    },
+    {
+     "name": "Fire Burn Arisanna",
+     "delta": 1.0
+    },
+    {
+     "name": "Water Fractals Diao Chan",
+     "delta": 0.8
+    }
+   ],
+   "down": [
+    {
+     "name": "Water Mill Nico",
+     "delta": -1.8
+    },
+    {
+     "name": "Wind Byakko",
+     "delta": -1.4
+    },
+    {
+     "name": "Wind Crux Lorraine",
+     "delta": -1.4
+    }
+   ]
+  },
+  {
+   "type": "event",
+   "dur": 3.6,
+   "kicker": "Biggest event of the week",
+   "event": "Wilczek Regional",
+   "detail": "48 players · .asphodel/paradise",
+   "winner": "Ashtoreth",
+   "deck": "Water Exia Whirlpool Mill Jin"
+  },
+  {
+   "type": "cta",
+   "dur": 3.0,
+   "title": "Full report + decklist in our latest post",
+   "sub": "New Meta Report every Monday",
+   "button": "Follow @ga_hub_it"
+  }
+ ],
+ "event_bg_crop": [
+  0.04,
+  0.275,
+  0.96,
+  0.97
+ ]
+}
