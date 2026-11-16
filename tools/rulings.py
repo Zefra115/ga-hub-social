@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Rulings 101: carosello settimanale di regole per neofiti (GA.Hub).
 
-Ogni puntata è un file JSON in rulings/NNN-slug.json (testi delle slide in inglese, didascalia in
-italiano a parte). Ogni regola citata va verificata su rules.gatcg.com (le pagine sono disponibili
+Ogni puntata è un file JSON in rulings/NNN-slug.json. Testi delle slide e didascalia in ITALIANO
+(i nomi delle carte e i termini di gioco restano in inglese: champion, regalia, Materialize Phase...).
+Carte vicine nella stessa slide: elementi diversi (es. Fire accanto a Water), per non confonderle. Ogni regola citata va verificata su rules.gatcg.com (le pagine sono disponibili
 in Markdown aggiungendo .md all'URL; indice in https://rules.gatcg.com/llms.txt) e la fonte va
 indicata nel campo "sources" della puntata.
 
@@ -119,7 +120,7 @@ def render(spec, out, cache):
     os.makedirs(out, exist_ok=True)
     slides = spec["slides"]
     tot = len(slides)
-    foot = "Rules: rules.gatcg.com · Card images © Weebs of the Shore"
+    foot = spec.get("footer", "Regole: rules.gatcg.com · Immagini delle carte © Weebs of the Shore")
     files = []
     for n, s in enumerate(slides, 1):
         kind = s["type"]

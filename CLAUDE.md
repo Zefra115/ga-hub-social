@@ -17,6 +17,7 @@ Due filoni, da tenere in conversazioni separate:
 | Script dei dati, del sito e delle immagini social | `tools/pipeline.py`, che è la **versione di riferimento** (nell'artifact: `pipeline/pipeline.txt`) |
 | Script di pubblicazione su Instagram | `tools/publish_ig.py` (post da 1 immagine o carosello, storie) |
 | Script delle news da Discord | `tools/news.py`, stato in `news/state.json` |
+| Rulings 101 (regole per neofiti, carosello settimanale) | `tools/rulings.py`, puntate in `rulings/NNN-slug.json` (fonti verificate su rules.gatcg.com, versione `.md` delle pagine) |
 | Storico dei post (slide, storie, didascalia) | `posts/AAAA-MM-GG/` |
 | Dati settimanali (bundle, archivio eventi, indice immagini) | solo nell'artifact: `data/bundle.json`, `data/events.json`, `pipeline/imgidx.json`, `cards/sNN.webp` |
 
@@ -76,7 +77,8 @@ Quando l'utente scrive «controllo news» (o simile), esegui subito, in questa s
 
 ### Social
 - **Ogni settimana la lista deve essere di un archetipo diverso** dalle 6 settimane precedenti (`featured_history`).
-- Testi **dentro le immagini in inglese**; **didascalia in italiano**.
+- Testi **dentro le immagini in inglese**; **didascalia in italiano**. Eccezione: **Rulings 101** ha anche i testi delle slide **in italiano** (nomi delle carte e termini di gioco in inglese).
+- Quando più carte sono **vicine** in una slide, usare carte di **elementi diversi** (es. Fire accanto a Water), per non confondere chi guarda.
 - Il Meta Report #1 è uscito il **16/11/2026**: la numerazione parte da lì.
 - Grafica:
   - slide 1080×1350, storie 1080×1920;
