@@ -4,10 +4,10 @@
   python3 -I tools/reel.py --spec reels/2026-11-16.json --out reel.mp4 [--work DIR] [--preview]
 
 Scene (spec JSON, testi in inglese come le altre grafiche del meta report):
-  hook    → titolo d'impatto + numero che cresce (from → to)
+  hook    → titolo d'impatto, spirit + champion più alto dell'archetipo in crescita, percentuale che sale
   top3    → i 3 archetipi più giocati con barre animate
   movers  → chi sale / chi scende (15 giorni)
-  event   → evento più grande + lista della settimana, con la slide del mazzo sullo sfondo
+  event   → evento più grande: spirit e champion più alto della lista vincitrice girati dal dorso GA HUB
   cta     → logo, "full report in our latest post", follow
 Zone sicure dei reel: contenuti tra y≈260 e y≈1500 e lontani dal bordo destro (pulsanti).
 """
@@ -122,31 +122,100 @@ def fmt(v, dec=1, suffix="%"):
 
 
 # ------------------------------------------------------------------ scene
-def scene_hook(fr, t, s):
-    d0 = 0.15
-    with fr.layer(prog(t, d0, .35), dy=(1 - prog(t, d0, .35)) * 40) as L:
-        f = P._font("semi", 34)
-        text_c(L.d, (W // 2, 420), s["kicker"].upper(), f, P.ACC)
-    with fr.layer(prog(t, .35, .4), dy=(1 - prog(t, .35, .4)) * 60) as L:
-        f = P._font("black", 92)
-        y = 520
+def ease_back(t):
+    t = max(0.0, min(1.0, t))
+    c1 = 1.70158
+    return 1 + (c1 + 1) * (t - 1) ** 3 + c1 * (t - 1) ** 2
+
+
+_CARD_CACHE = {}
+
+
+def card_img(name, edition, work):
+    key = (name, edition)
+    if key not in _CARD_CACHE:
+        spec = importlib.util.spec_from_file_location("garulings", os.path.join(HERE, "rulings.py"))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        _CARD_CACHE[key] = m.card_image(name, edition, os.path.join(work, "cards")).convert("RGBA")
+    return _CARD_CACHE[key]
+
+
+def back_img():
+    from PIL import Image
+    if "back" not in _CARD_CACHE:
+        _CARD_CACHE["back"] = Image.open(os.path.join(ROOT, "assets/brand/dorso-GA-HUB.png")).convert("RGBA")
+    return _CARD_CACHE["back"]
+
+
+def put_card(L, img, cx, cy, h, angle=0.0, sx=1.0, glow=None):
+    """Disegna una carta centrata in (cx, cy), alta h, ruotata e schiacciata in orizzontale (per il flip)."""
+    from PIL import Image, ImageDraw, ImageFilter
+    w = int(img.width * h / img.height)
+    ww = max(2, int(w * abs(sx)))
+    c = img.resize((ww, h), Image.LANCZOS)
+    m = Image.new("L", (ww, h), 0)
+    ImageDraw.Draw(m).rounded_rectangle([0, 0, ww - 1, h - 1], int(w * 0.045), fill=255)
+    c.putalpha(m)
+    pad = 60
+    canvas = Image.new("RGBA", (ww + 2 * pad, h + 2 * pad), (0, 0, 0, 0))
+    sh = Image.new("L", canvas.size, 0)
+    ImageDraw.Draw(sh).rounded_rectangle([pad + 6, pad + 18, pad + ww + 6, pad + h + 18], 24, fill=170)
+    canvas.paste(Image.new("RGBA", canvas.size, (0, 0, 0, 255)), (0, 0), sh.filter(ImageFilter.GaussianBlur(16)))
+    if glow:
+        gl = Image.new("L", canvas.size, 0)
+        ImageDraw.Draw(gl).rounded_rectangle([pad - 8, pad - 8, pad + ww + 8, pad + h + 8], 30, fill=150)
+        canvas.paste(Image.new("RGBA", canvas.size, glow + (255,)), (0, 0), gl.filter(ImageFilter.GaussianBlur(22)))
+    canvas.paste(c, (pad, pad), c)
+    if angle:
+        canvas = canvas.rotate(angle, resample=Image.BICUBIC, expand=True)
+    L.l.paste(canvas, (int(cx - canvas.width / 2), int(cy - canvas.height / 2)), canvas)
+
+
+def scene_hook(fr, t, s, work):
+    with fr.layer(prog(t, .1, .35), dy=(1 - prog(t, .1, .35)) * 40) as L:
+        text_c(L.d, (W // 2, 330), s["kicker"].upper(), P._font("semi", 34), P.ACC)
+    with fr.layer(prog(t, .25, .4), dy=(1 - prog(t, .25, .4)) * 60) as L:
+        f = P._font("black", 82)
+        y = 420
         for ln in wrap(L.d, s["title"], f, W - 160):
             text_c(L.d, (W // 2, y), ln, f, P.FG)
-            y += 108
-        hook_y = y
-    k = prog(t, .9, 1.4)
+            y += 96
+    # carte: spirit e champion dell'archetipo, "servite" con rimbalzo
+    cards = s.get("cards", [])
+    h = 520
+    poses = [(W // 2 - 175, 900, 9), (W // 2 + 175, 900, -7)] if len(cards) == 2 else [(W // 2, 900, 0)]
+    col = el_color(s.get("element", ""))
+    for i, (c, (cx, cy, ang)) in enumerate(zip(cards, poses)):
+        st = .55 + i * .2
+        k = ease_back((t - st) / .55)
+        if t < st:
+            continue
+        with fr.layer(min(1, (t - st) / .2)) as L:
+            put_card(L, card_img(c["name"], c.get("edition"), work), cx, cy + (1 - k) * 700, h,
+                     angle=ang * k + (1 - k) * (25 if i else -25), glow=col if i == len(cards) - 1 else None)
+            if c.get("label") and k > .9:
+                text_c(L.d, (cx, cy + h // 2 + 40), c["label"].upper(), P._font("semi", 28), P.MUTED)
+    # percentuale che cresce, sopra le carte in basso
+    k = prog(t, 1.25, 1.2)
     v = s["from"] + (s["to"] - s["from"]) * k
-    with fr.layer(prog(t, .8, .3)) as L:
-        f = P._font("black", 230)
-        col = el_color(s.get("element", ""))
-        text_c(L.d, (W // 2, hook_y + 230), fmt(v), f, col)
-        f2 = P._font("semi", 40)
-        text_c(L.d, (W // 2, hook_y + 400), s["sub"], f2, P.MUTED)
-    if t > 2.0:
-        e = emoji(s.get("emoji", "🚀"), 120)
-        a = prog(t, 2.0, .3)
-        with fr.layer(a, dy=(1 - a) * 80) as L:
-            L.l.paste(e, (W // 2 - e.width // 2, hook_y + 470), e)
+    a = prog(t, 1.15, .3)
+    with fr.layer(a, dy=(1 - a) * 50) as L:
+        d = L.d
+        bw, by = 720, 1240
+        d.rounded_rectangle([W // 2 - bw // 2, by, W // 2 + bw // 2, by + 230], 40, fill=(13, 15, 23, 235), outline=col + (255,), width=4)
+        txt = f"{fmt(s['from'])} → "
+        f1, f2 = P._font("bold", 52), P._font("black", 150)
+        w1, w2 = d.textlength(txt, font=f1), d.textlength(fmt(v), font=f2)
+        x0 = W // 2 - (w1 + w2) / 2
+        d.text((x0, by + 110), txt, font=f1, fill=P.MUTED, anchor="lm")
+        d.text((x0 + w1, by + 108), fmt(v), font=f2, fill=col, anchor="lm")
+        text_c(d, (W // 2, by + 200), s["sub"], P._font("semi", 32), P.FG)
+    if t > 2.45:
+        e = emoji(s.get("emoji", "🚀"), 110)
+        a = ease_back((t - 2.45) / .4)
+        with fr.layer(min(1, (t - 2.45) / .15)) as L:
+            L.l.paste(e, (W // 2 + 300, int(1190 - 40 * a)), e)
 
 
 def scene_top3(fr, t, s):
@@ -204,36 +273,47 @@ def scene_movers(fr, t, s):
         y0 += 70 + len(rows) * 118 + 60
 
 
-def scene_event(fr, t, s, bg_img):
-    from PIL import Image, ImageFilter, ImageEnhance
-    if bg_img is not None:  # slide del mazzo che scorre lentamente sullo sfondo
-        z = 1.0 + 0.06 * t
-        bw = int(W * 0.92 * z)
-        bh = int(bg_img.height * bw / bg_img.width)
-        im = bg_img.resize((bw, bh), Image.LANCZOS)
-        im = ImageEnhance.Brightness(im).enhance(0.55)
-        a = prog(t, 0, .5) * 0.9
-        with fr.layer(a) as L:
-            m = Image.new("L", im.size, 255)
-            L.l.paste(im.convert("RGBA"), ((W - bw) // 2, 1060 - int(30 * t)), m)
-    with fr.layer(prog(t, .1, .35)) as L:
+def scene_event(fr, t, s, work):
+    with fr.layer(prog(t, .05, .35)) as L:
         L.d.text((64, 330), s["kicker"].upper(), font=P._font("semi", 34), fill=P.ACC)
-        y = 380
-        f = P._font("black", 72)
-        for ln in wrap(L.d, s["event"], f, W - 128):
-            L.d.text((64, y), ln, font=f, fill=P.FG)
-            y += 84
-        L.d.text((64, y + 10), s["detail"], font=P._font("semi", 36), fill=P.MUTED)
-    a = prog(t, .7, .45)
+        L.d.text((64, 380), s["event"], font=P._font("black", 72), fill=P.FG)
+        L.d.text((64, 470), s["detail"], font=P._font("semi", 36), fill=P.MUTED)
+    # carte coperte (dorso GA HUB) che arrivano e si girano
+    cards = s.get("cards", [])
+    h = 470
+    poses = [(W // 2 - 190, 820, 6), (W // 2 + 190, 820, -6)] if len(cards) == 2 else [(W // 2, 820, 0)]
+    col = el_color(s["deck"])
+    for i, (c, (cx, cy, ang)) in enumerate(zip(cards, poses)):
+        st = .3 + i * .18
+        if t < st:
+            continue
+        k = ease((t - st) / .45)
+        fs = 1.0 + i * .2  # inizio del flip
+        if t < fs:
+            img, sx = back_img(), 1.0
+        else:
+            u = min(1.0, (t - fs) / .36)
+            if u < .5:
+                img, sx = back_img(), 1 - u * 2
+            else:
+                img, sx = card_img(c["name"], c.get("edition"), work), (u - .5) * 2
+        with fr.layer(min(1, (t - st) / .15)) as L:
+            put_card(L, img, cx + (1 - k) * (-500 if i == 0 else 500), cy, h, angle=ang * k, sx=sx,
+                     glow=col if (t > fs + .36 and i == len(cards) - 1) else None)
+            if c.get("label") and t > fs + .36:
+                text_c(L.d, (cx, cy + h // 2 + 40), c["label"].upper(), P._font("semi", 28), P.MUTED)
+    a = prog(t, 1.75, .4)
     with fr.layer(a, dy=(1 - a) * 60) as L:
         d = L.d
-        d.rounded_rectangle([64, 700, W - 64, 1010], 28, fill=(23, 27, 40, 235), outline=P.GOLD + (255,), width=3)
-        d.text((100, 740), "WINNER", font=P._font("semi", 30), fill=P.GOLD)
-        d.text((100, 785), s["winner"], font=P._font("black", 56), fill=P.FG)
+        d.rounded_rectangle([64, 1150, W - 64, 1440], 28, fill=(23, 27, 40, 240), outline=P.GOLD + (255,), width=3)
+        tr = emoji("🏆", 64)
+        L.l.paste(tr, (100, 1180), tr)
+        d.text((186, 1192), "WINNER", font=P._font("semi", 30), fill=P.GOLD)
+        d.text((100, 1262), s["winner"], font=P._font("black", 56), fill=P.FG)
         f = P._font("bold", 40)
-        y = 870
+        y = 1345
         for ln in wrap(d, s["deck"], f, W - 200)[:2]:
-            d.text((100, y), ln, font=f, fill=el_color(s["deck"]))
+            d.text((100, y), ln, font=f, fill=col)
             y += 50
 
 
@@ -277,12 +357,6 @@ def render(spec, out, work, preview=False):
     except Exception as e:  # noqa: BLE001
         print("logo stagione non disponibile:", e, file=sys.stderr)
     logo_img = Image.open(os.path.join(ROOT, spec.get("logo", "assets/brand/logo-GA-HUB.png"))).convert("RGB")
-    ev_bg = None
-    if spec.get("event_bg"):
-        ev_bg = Image.open(os.path.join(ROOT, spec["event_bg"])).convert("RGB")
-        if spec.get("event_bg_crop"):  # solo la parte con le carte, senza intestazione della slide
-            c = spec["event_bg_crop"]
-            ev_bg = ev_bg.crop((int(c[0] * ev_bg.width), int(c[1] * ev_bg.height), int(c[2] * ev_bg.width), int(c[3] * ev_bg.height)))
     scenes = spec["scenes"]
     frames_dir = os.path.join(work, "frames")
     shutil.rmtree(frames_dir, ignore_errors=True)
@@ -298,13 +372,13 @@ def render(spec, out, work, preview=False):
             fr = Frame(background(gt, logo_img))
             kind = sc["type"]
             if kind == "hook":
-                scene_hook(fr, t, sc)
+                scene_hook(fr, t, sc, work)
             elif kind == "top3":
                 scene_top3(fr, t, sc)
             elif kind == "movers":
                 scene_movers(fr, t, sc)
             elif kind == "event":
-                scene_event(fr, t, sc, ev_bg)
+                scene_event(fr, t, sc, work)
             elif kind == "cta":
                 scene_cta(fr, t, sc, logo_img)
             footer(fr, spec.get("footer", "Data: grandarchivestats.com · Card images © Weebs of the Shore"))

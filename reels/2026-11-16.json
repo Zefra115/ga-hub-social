@@ -2,18 +2,29 @@
  "issue": 1,
  "season": ".asphodel/paradise",
  "logo": "assets/brand/logo-GA-HUB.png",
- "event_bg": "posts/2026-11-16/slide-4.jpg",
  "scenes": [
   {
    "type": "hook",
-   "dur": 3.6,
+   "dur": 4.0,
    "kicker": "Meta Report #1 · last 15 days",
    "title": "Fire Umbra Alice almost tripled",
    "element": "Fire",
    "from": 1.5,
    "to": 4.3,
-   "sub": "of the meta · 55.4% win rate",
-   "emoji": "🚀"
+   "sub": "meta share · last 15 days · 55.4% WR",
+   "emoji": "🚀",
+   "cards": [
+    {
+     "name": "Spirit of Fire",
+     "edition": "PRD",
+     "label": "Lv 0"
+    },
+    {
+     "name": "Alice, Phantom Monarch",
+     "edition": "PTM",
+     "label": "Lv 2"
+    }
+   ]
   },
   {
    "type": "top3",
@@ -74,12 +85,24 @@
   },
   {
    "type": "event",
-   "dur": 3.6,
+   "dur": 4.2,
    "kicker": "Biggest event of the week",
    "event": "Wilczek Regional",
    "detail": "48 players · .asphodel/paradise",
    "winner": "Ashtoreth",
-   "deck": "Water Exia Whirlpool Mill Jin"
+   "deck": "Water Exia Whirlpool Mill Jin",
+   "cards": [
+    {
+     "name": "Spirit of Fortuitous Water",
+     "edition": "HVN",
+     "label": "Lv 0"
+    },
+    {
+     "name": "Jin, Undying Resolve",
+     "edition": "AMB",
+     "label": "Lv 3"
+    }
+   ]
   },
   {
    "type": "cta",
@@ -88,11 +111,5 @@
    "sub": "New Meta Report every Monday",
    "button": "Follow @ga_hub_it"
   }
- ],
- "event_bg_crop": [
-  0.04,
-  0.275,
-  0.96,
-  0.97
  ]
 }
