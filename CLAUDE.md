@@ -42,6 +42,9 @@ Passi della procedura:
 - Contano **solo i messaggi dell'utente** (zefra115, id `402588692864040960`), elencati in `AUTHORS` in `tools/news.py`.
 - Ogni news inoltrata diventa **una storia** per immagine. Se subito dopo l'inoltro l'utente scrive un messaggio con la parola **"post"**, si prepara anche un **post nel feed** (1080×1350, didascalia in italiano).
 - Script: `tools/news.py scan --work DIR` (scarica e genera storie/post + `manifest.json`), `render` (rigenera dopo aver cambiato il `kicker`: News, Spoiler, Event, Ban list…), `done --last-id ID` (avanza `news/state.json` dopo la pubblicazione).
+- Grafica: intestazione con GA.HUB a sinistra e, in alto a destra, **logo Grand Archive** (`assets/ga-logo.png`) accanto al logo dell'espansione.
+- **Spoiler** (kicker "Spoiler"): la carta viene trovata in automatico nell'immagine (`find_card`) e mostrata **grande e leggibile**, con l'**artwork della carta sfocato** dietro e il titolo **🔥 SPOILER ALERT 🔥**. Il campo `subtitle` del manifest (inglese, es. ".asphodel/cantabile · December 11th, 2026") va sotto il titolo. Se la carta non viene trovata o il ritaglio è sbagliato: `card_boxes: {"N": [x0,y0,x1,y1]}` in frazioni dell'immagine, poi `render`.
+- Le altre news usano l'immagine intera su sfondo sfocato con l'etichetta del kicker.
 - File pubblicati in `posts/news/AAAA-MM-GG/`.
 - Attività **"News Discord GA.Hub"** (id `trig_012Xbhmx2WYtyFm18KjUHwbh`, procedura completa nel prompt): ogni giorno alle 17:43 prepara, notifica e, dopo l'ok, pubblica alle 20:00. Se non ci sono news nuove non fa nulla.
 
