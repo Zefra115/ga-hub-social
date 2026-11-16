@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Reel del Meta Report (1080x1920, 30 fps, 20 s = 5 scene da 4 s, con la base originale di tools/music.py).
+"""Reel del Meta Report (1080x1920, 30 fps, ~23 s, con base dubstep originale di tools/music.py a 140 BPM:
+ogni scena dura un numero intero di battute, 2-3-3-3-2, e i cambi di scena cadono sugli impatti).
 
   python3 -I tools/reel.py --spec reels/2026-11-16.json --out reel.mp4 [--work DIR] [--preview]
   python3 -I tools/reel.py --from-bundle W/run/bundle.json --spec reels/<data>.json [--out reel.mp4]
@@ -361,6 +362,12 @@ def render(spec, out, work, preview=False):
         print("logo stagione non disponibile:", e, file=sys.stderr)
     logo_img = Image.open(os.path.join(ROOT, spec.get("logo", "assets/brand/logo-GA-HUB.png"))).convert("RGB")
     scenes = spec["scenes"]
+    bpm = spec.get("bpm")
+    if bpm:  # durata delle scene in battute: i cambi di scena cadono sugli impatti della musica
+        for sc in scenes:
+            if sc.get("bars"):
+                sc["dur"] = sc["bars"] * 240 / bpm
+        scenes[-1]["dur"] += spec.get("tail", 1.0)  # coda per l'impatto finale
     frames_dir = os.path.join(work, "frames")
     shutil.rmtree(frames_dir, ignore_errors=True)
     os.makedirs(frames_dir)
@@ -404,11 +411,21 @@ def render(spec, out, work, preview=False):
     # codifica accettata dall'API di Instagram per i reel: BT.709 dichiarato, 48 kHz, GOP regolare
     # musica: base originale (tools/music.py) a 120 BPM, 2 battute = 4 s = una scena; se manca, audio muto
     total = n / FPS
-    music = spec.get("music", "assets/music/reel-base.wav")
+    style = spec.get("style", "dubstep")
+    secs = [sc.get("bars") for sc in scenes]
+    if bpm and all(secs):
+        default_music = f"assets/music/{style}-{int(bpm)}-{'-'.join(str(x) for x in secs)}.wav"
+    else:
+        default_music = "assets/music/reel-base.wav"
+    music = spec.get("music", default_music)
     mpath = os.path.join(ROOT, music) if music else None
     if mpath and not os.path.exists(mpath):
-        subprocess.run([sys.executable, "-I", os.path.join(HERE, "music.py"), "--out", mpath,
-                        "--bars", str(max(1, round(total / 2)))], check=True)
+        os.makedirs(os.path.dirname(mpath), exist_ok=True)
+        if bpm and all(secs):
+            args = ["--style", style, "--bpm", str(bpm), "--sections", ",".join(str(x) for x in secs)]
+        else:
+            args = ["--style", "epic", "--bars", str(max(1, round(total / 2)))]
+        subprocess.run([sys.executable, "-I", os.path.join(HERE, "music.py"), "--out", mpath, *args], check=True)
     if mpath:
         ain = ["-i", mpath]
         af = f"loudnorm=I=-14:TP=-1.5:LRA=7,afade=t=out:st={max(0, total - 0.8):.2f}:d=0.8,apad"
@@ -495,12 +512,12 @@ def spec_from_bundle(b):
             "almost doubled" if ratio >= 1.8 else "is on the rise")
     elem = h[0].split()[0]
     scenes = [
-        {"type": "hook", "dur": 4.0, "kicker": f"Meta Report #{issue} · last 15 days", "title": f"{h[0]} {verb}",
+        {"type": "hook", "bars": 2, "kicker": f"Meta Report #{issue} · last 15 days", "title": f"{h[0]} {verb}",
          "element": elem, "from": h[2], "to": h[3], "sub": f"meta share · last 15 days · {h[4]}% WR", "emoji": "🚀",
          "cards": spirit_and_top((b.get("cons") or {}).get(h[0], {}).get("material", []))},
-        {"type": "top3", "dur": 4.0, "kicker": "Most played · last 30 days", "title": "Top 3 archetypes",
+        {"type": "top3", "bars": 3, "kicker": "Most played · last 30 days", "title": "Top 3 archetypes",
          "rows": [{"name": r[0], "share": r[1], "wr": r[2]} for r in rank[:3]]},
-        {"type": "movers", "dur": 4.0, "kicker": "Last 15 days vs season", "title": "Who's rising?",
+        {"type": "movers", "bars": 3, "kicker": "Last 15 days vs season", "title": "Who's rising?",
          "up": [{"name": m[0], "delta": m[1]} for m in up], "down": [{"name": m[0], "delta": m[1]} for m in dn]},
     ]
     wk, feat = b.get("week_event"), b.get("featured")
@@ -513,12 +530,13 @@ def spec_from_bundle(b):
             mat = list_material(feat.get("list"))
         else:
             mat = (b.get("cons") or {}).get(win[1], {}).get("material", [])
-        scenes.append({"type": "event", "dur": 4.0, "kicker": "Biggest event of the week", "event": ev,
+        scenes.append({"type": "event", "bars": 3, "kicker": "Biggest event of the week", "event": ev,
                        "detail": f"{wk['players']} players · {snap['season']}", "winner": win[2], "deck": win[1],
                        "cards": spirit_and_top(mat)})
-    scenes.append({"type": "cta", "dur": 4.0, "title": "Full report + decklist in our Monday post",
+    scenes.append({"type": "cta", "bars": 2, "title": "Full report + decklist in our Monday post",
                    "sub": "New Meta Report every Monday", "button": "Follow @ga_hub_it"})
-    return {"issue": issue, "date": snap["date"], "season": snap["season"], "logo": "assets/brand/logo-GA-HUB.png", "scenes": scenes}
+    return {"issue": issue, "date": snap["date"], "season": snap["season"], "logo": "assets/brand/logo-GA-HUB.png",
+            "style": "dubstep", "bpm": 140, "scenes": scenes}
 
 
 def main():
