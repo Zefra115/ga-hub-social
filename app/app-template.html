@@ -1,0 +1,861 @@
+<title>Archive Deck Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: app shell — left rail (brand, deck switcher, nav) + workspace with a sticky deck summary strip; on phones the rail collapses to a top bar + bottom tab bar */
+:root{
+  --bg:#f3f4f8; --surface:#ffffff; --raised:#fbfbfd; --sunk:#eceef4; --line:#dde1ea; --line-strong:#c8cdd9;
+  --fg:#141826; --muted:#5e6679; --faint:#8a92a5;
+  --accent:#5a4bd6; --accent-ink:#ffffff; --accent-soft:#ece9fd; --accent-line:#c9c2f7;
+  --gold:#b98a12; --gold-soft:#fbf1d3; --mem:#2f6fd6; --mem-soft:#dfeafc;
+  --good:#16804f; --good-soft:#dcf3e6; --warn:#a15c00; --warn-soft:#fcefd8; --bad:#c0352b; --bad-soft:#fde4e1;
+  --fire:#e0552b; --water:#2f7ae0; --wind:#2f9a52; --norm:#8c94a6; --adv:#9b5de5;
+  --shadow:0 1px 2px rgba(20,24,38,.05),0 4px 16px rgba(20,24,38,.05);
+  --f-display:"Outfit","Inter",system-ui,sans-serif; --f-body:"Inter",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,monospace;
+  --r:14px; --r-sm:9px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d0f17; --surface:#151926; --raised:#1a1f2e; --sunk:#10131d; --line:#252b3c; --line-strong:#323a50;
+  --fg:#e8ebf4; --muted:#9aa2b8; --faint:#6b7389;
+  --accent:#9d92ff; --accent-ink:#0d0f17; --accent-soft:#25214a; --accent-line:#463f8a;
+  --gold:#e7bd47; --gold-soft:#3a2f10; --mem:#6aa3ff; --mem-soft:#14264a;
+  --good:#5bd69a; --good-soft:#113324; --warn:#f2b54b; --warn-soft:#3a2a0d; --bad:#ff8378; --bad-soft:#3e1714;
+  --fire:#ff7a4d; --water:#62a3ff; --wind:#5fd27e; --norm:#a6adbf; --adv:#c39bff;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d0f17; --surface:#151926; --raised:#1a1f2e; --sunk:#10131d; --line:#252b3c; --line-strong:#323a50;
+  --fg:#e8ebf4; --muted:#9aa2b8; --faint:#6b7389;
+  --accent:#9d92ff; --accent-ink:#0d0f17; --accent-soft:#25214a; --accent-line:#463f8a;
+  --gold:#e7bd47; --gold-soft:#3a2f10; --mem:#6aa3ff; --mem-soft:#14264a;
+  --good:#5bd69a; --good-soft:#113324; --warn:#f2b54b; --warn-soft:#3a2a0d; --bad:#ff8378; --bad-soft:#3e1714;
+  --fire:#ff7a4d; --water:#62a3ff; --wind:#5fd27e; --norm:#a6adbf; --adv:#c39bff;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+  color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-underline-offset:2px}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0}
+h2{font-size:20px} h3{font-size:16px}
+.label{font:600 11px var(--f-body);text-transform:uppercase;letter-spacing:.07em;color:var(--faint)}
+.muted{color:var(--muted)} .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.note{font-size:12.5px;color:var(--muted);max-width:78ch;margin:0}
+.src{font-size:12px;color:var(--faint)}
+.shell{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+.rail{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:18px;padding:20px 14px 16px max(14px,env(safe-area-inset-left,0px));background:var(--surface);border-right:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;padding:0 6px}
+.brand svg{flex:none}
+.brand b{font:700 17px var(--f-display);letter-spacing:-.01em;display:block;line-height:1.1}
+.brand small{font:500 11px var(--f-body);color:var(--faint)}
+.deckbox{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--raised)}
+.deckbox select{width:100%}
+.deckbox .row{gap:2px;flex-wrap:nowrap}.deckbox .btn.sm{padding:5px 7px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:center;gap:11px;width:100%;padding:9px 10px;border:0;border-radius:var(--r-sm);background:none;color:var(--muted);font:500 14px var(--f-body);cursor:pointer;text-align:left;transition:background .15s,color .15s}
+.nav button svg{flex:none;opacity:.8}
+.nav button:hover{background:var(--sunk);color:var(--fg)}
+.nav button[aria-selected="true"]{background:var(--accent-soft);color:var(--fg)}
+.nav button[aria-selected="true"] svg{color:var(--accent);opacity:1}
+.rail-foot{margin-top:auto;padding:10px;border-radius:var(--r-sm);background:var(--sunk);font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.rail-foot b{color:var(--fg);font-weight:600}
+.work{min-width:0;display:flex;flex-direction:column}
+.strip{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.strip-in{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-block:12px}
+.strip h1{font-size:19px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.kpis{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.kpi{display:flex;flex-direction:column;padding:5px 12px;border-radius:var(--r-sm);background:var(--surface);border:1px solid var(--line);min-width:84px}
+.kpi span{font:600 10px var(--f-body);text-transform:uppercase;letter-spacing:.07em;color:var(--faint)}
+.kpi b{font:600 16px var(--f-mono);font-variant-numeric:tabular-nums}
+.pad{padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+main{padding-block:22px 64px}
+.topbar,.tabbar{display:none}
+@media (max-width:900px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .rail{display:none}
+  .topbar{display:flex;align-items:center;gap:10px;padding-block:10px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .topbar select{flex:1;min-width:0}
+  .pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .strip{top:0}
+  .tabbar{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--surface);border-top:1px solid var(--line);padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
+  .tabbar button{display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;color:var(--muted);font:500 10.5px var(--f-body);padding:4px 0;border-radius:8px;cursor:pointer;min-width:0}
+  .tabbar button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+  .tabbar button[aria-selected="true"]{color:var(--accent);background:var(--accent-soft)}
+  main{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+  .kpis{margin-left:0;width:100%}
+  .kpi{flex:1;min-width:0}
+}
+.grid2{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:18px;align-items:start}
+.grid-eq{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px;align-items:start}
+.grid-mu{display:grid;grid-template-columns:minmax(0,280px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:1100px){.grid2,.grid-mu{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0;box-shadow:var(--shadow)}
+.panel.flat{box-shadow:none;background:var(--raised)}
+.phead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.stack{display:flex;flex-direction:column;gap:18px;min-width:0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+textarea,input,select{font:inherit;color:var(--fg);background:var(--raised);border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:8px 10px;min-width:0;transition:border-color .15s,box-shadow .15s}
+textarea{width:100%;resize:vertical;font-family:var(--f-mono);font-size:12.5px;line-height:1.6}
+input[type=number]{width:72px}
+textarea:focus,input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{font:500 13px var(--f-body);border:1px solid var(--line-strong);background:var(--surface);color:var(--fg);border-radius:var(--r-sm);padding:7px 13px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;white-space:nowrap;text-decoration:none;transition:background .15s,border-color .15s,transform .1s}
+.btn:hover{border-color:var(--accent);background:var(--raised)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.07);background:var(--accent)}
+.btn.ghost{border-color:transparent;background:none;color:var(--muted)}
+.btn.ghost:hover{color:var(--fg);background:var(--sunk)}
+.btn.sm{padding:5px 9px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:default}
+.seg{display:inline-flex;background:var(--sunk);border-radius:var(--r-sm);padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:none;padding:5px 10px;border-radius:7px;font:500 12px var(--f-body);color:var(--muted);cursor:pointer}
+.seg button:hover{color:var(--fg)}
+.seg button.on{background:var(--surface);color:var(--fg);box-shadow:var(--shadow)}
+.tablewrap{overflow-x:auto;min-width:0}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{font:600 10.5px var(--f-body);text-transform:uppercase;letter-spacing:.07em;color:var(--faint);text-align:left;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.sec td{background:var(--sunk);font:600 10.5px var(--f-body);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:6px 8px}
+tr.fx td{background:var(--raised);font-size:12.5px;color:var(--muted);white-space:pre-line;line-height:1.55}
+tr.card-row:hover td{background:var(--raised)}
+.cname{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left;font-weight:500}
+.cname:hover{color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font:500 11px var(--f-body);border:1px solid var(--line);border-radius:999px;padding:2px 9px;background:none;color:var(--faint);cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--accent-line);color:var(--fg)}
+.chip.on{background:var(--accent-soft);border-color:var(--accent-line);color:var(--fg)}
+.chip.on.auto{border-style:dashed}
+.pill{display:inline-flex;align-items:center;gap:5px;font:600 11px var(--f-body);padding:3px 9px;border-radius:999px;white-space:nowrap;letter-spacing:.01em}
+.pill.good{background:var(--good-soft);color:var(--good)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.neu{background:var(--sunk);color:var(--muted)} .pill.acc{background:var(--accent-soft);color:var(--accent)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:0;background:var(--norm);box-shadow:0 0 0 2px color-mix(in srgb,var(--norm) 25%,transparent);flex:none}
+.dot.FIRE{background:var(--fire);box-shadow:0 0 0 2px color-mix(in srgb,var(--fire) 25%,transparent)}
+.dot.WATER{background:var(--water);box-shadow:0 0 0 2px color-mix(in srgb,var(--water) 25%,transparent)}
+.dot.WIND{background:var(--wind);box-shadow:0 0 0 2px color-mix(in srgb,var(--wind) 25%,transparent)}
+.dot.ADV{background:var(--adv);box-shadow:0 0 0 2px color-mix(in srgb,var(--adv) 25%,transparent)}
+.cost{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;font:600 12px var(--f-mono);border-radius:50%}
+.cost.res{background:var(--gold-soft);color:var(--gold);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent)}
+.cost.mem{background:var(--mem-soft);color:var(--mem);border-radius:6px;border:1px solid color-mix(in srgb,var(--mem) 45%,transparent)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.stat{background:var(--raised);border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 13px;min-width:0}
+.stat b{display:block;font:600 22px var(--f-mono);font-variant-numeric:tabular-nums;margin-top:2px}
+.stat .note{font-size:11.5px}
+.issues{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.issue{display:grid;grid-template-columns:auto minmax(0,1fr);gap:11px;align-items:start;padding:10px 12px;border-radius:var(--r-sm);background:var(--raised);border:1px solid var(--line)}
+.issue p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.issue b{font-weight:600}
+.ico{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:none;font:700 12px var(--f-body)}
+.ico.good{background:var(--good-soft);color:var(--good)} .ico.warn{background:var(--warn-soft);color:var(--warn)} .ico.bad{background:var(--bad-soft);color:var(--bad)} .ico.info{background:var(--accent-soft);color:var(--accent)}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:8px}
+.rule{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:10px 12px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--raised)}
+.rule b{font-weight:600;font-size:13px}
+.rule p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+.rule.bad{border-color:color-mix(in srgb,var(--bad) 40%,var(--line));background:color-mix(in srgb,var(--bad-soft) 55%,var(--raised))}
+.rule.warn{border-color:color-mix(in srgb,var(--warn) 35%,var(--line))}
+.bars{display:flex;align-items:flex-end;gap:8px;height:140px;padding-top:18px}
+.bars .b{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end;min-width:0}
+.bars .b i{display:block;width:100%;max-width:40px;background:linear-gradient(180deg,var(--gold),color-mix(in srgb,var(--gold) 60%,var(--surface)));border-radius:6px 6px 2px 2px;min-height:2px}
+.bars .b span{font:500 11px var(--f-mono);color:var(--faint)}
+.bars .b em{font:600 11px var(--f-mono);font-style:normal}
+.meter{height:7px;background:var(--sunk);border-radius:4px;overflow:hidden;min-width:60px}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.wrbar{position:relative;height:6px;border-radius:3px;background:var(--sunk);overflow:hidden;margin-top:5px}
+.wrbar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.wrbar::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--line-strong)}
+.archlist{display:flex;flex-direction:column;gap:3px;max-height:72vh;overflow-y:auto;margin:0 -4px;padding:0 4px}
+.archlist button{display:block;text-align:left;background:none;border:1px solid transparent;border-radius:var(--r-sm);padding:8px 10px;font:inherit;color:var(--fg);cursor:pointer;transition:background .15s}
+.archlist button:hover{background:var(--sunk)}
+.archlist button[aria-current="true"]{background:var(--accent-soft);border-color:var(--accent-line)}
+.archlist .t{display:flex;align-items:center;gap:6px;justify-content:space-between}
+.archlist .n{font-weight:500;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.archlist small{color:var(--faint);font-size:11.5px}
+.ai{border-radius:var(--r-sm);padding:16px 18px;background:linear-gradient(135deg,var(--accent-soft),var(--raised) 60%);border:1px solid var(--accent-line);overflow-wrap:anywhere}
+.ai h4{font-size:15px;margin:16px 0 4px} .ai h4:first-child{margin-top:0}
+.ai p{margin:6px 0} .ai ul{margin:6px 0;padding-left:20px}
+.ai code{font-family:var(--f-mono);font-size:12px;background:var(--surface);padding:1px 5px;border-radius:4px}
+.ai pre{white-space:pre-wrap;margin:4px 0;font-family:var(--f-mono);font-size:12.5px}
+.thinking{display:flex;align-items:center;gap:10px;color:var(--muted)}
+.thinking i{width:14px;height:14px;border-radius:50%;border:2px solid var(--accent-line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.games{display:flex;flex-wrap:wrap;gap:4px}
+.g{font:600 11px var(--f-mono);width:26px;height:26px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;border:0;cursor:pointer}
+.g.W{background:var(--good-soft);color:var(--good)} .g.L{background:var(--bad-soft);color:var(--bad)} .g.D{background:var(--sunk);color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:999px;font:500 13px var(--f-body);z-index:30;max-width:calc(100% - 32px);box-shadow:var(--shadow)}
+@media (max-width:900px){.toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
+details>summary{cursor:pointer;color:var(--muted);font-size:13px;list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"›";display:inline-block;transition:transform .15s;font-size:16px;line-height:1}
+details[open]>summary::before{transform:rotate(90deg)}
+.heat{display:inline-block;font:600 11.5px var(--f-mono);font-variant-numeric:tabular-nums;text-align:center;padding:3px 6px;border-radius:6px;min-width:42px}
+.h-good{background:var(--good-soft);color:var(--good)} .h-bad{background:var(--bad-soft);color:var(--bad)} .h-mid{background:var(--sunk);color:var(--muted)}
+.faded{opacity:.5}
+.decklist{font-family:var(--f-mono);font-size:12px;white-space:pre-wrap;background:var(--sunk);border-radius:var(--r-sm);padding:12px;margin:0;max-height:340px;overflow:auto}
+.hero-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--line-strong);border-radius:var(--r)}
+.callout{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:var(--r-sm);background:var(--gold-soft);color:var(--fg);font-size:13px}
+.callout svg{flex:none;color:var(--gold);margin-top:2px}
+.mx td,.mx th{padding:3px}
+.mx tr.me td{background:var(--accent-soft)}
+.modal{position:fixed;inset:0;z-index:40;background:rgba(8,10,16,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:fade .15s ease-out}
+.modal[hidden]{display:none}
+@keyframes fade{from{opacity:0}}
+.modal-in{position:relative;display:grid;grid-template-columns:auto minmax(0,340px);gap:22px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px;max-height:100%;overflow:auto;max-width:820px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.cardimg{width:min(360px,72vw);aspect-ratio:300/420;border-radius:16px;background-color:var(--sunk);background-repeat:no-repeat;box-shadow:0 10px 30px rgba(0,0,0,.3);position:relative}
+.cardimg.loading::after{content:"Caricamento…";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:13px}
+.cardimg.noimg::after{content:"Immagine non disponibile";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:13px;text-align:center;padding:16px}
+.modal-side{display:flex;flex-direction:column;gap:10px;min-width:0;padding-top:4px}
+.modal-side .fx{white-space:pre-line;font-size:13.5px;line-height:1.6;margin:0}
+.modal-x{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2}
+.modal-x:hover{background:var(--sunk)}
+.modal-nav{display:flex;gap:6px}
+@media (max-width:720px){.modal-in{grid-template-columns:minmax(0,1fr);justify-items:center;padding:16px}.cardimg{width:min(300px,100%)}.modal-side{width:100%}}
+.dl-line{display:block;width:100%;text-align:left;background:none;border:0;padding:1px 0;font:inherit;color:inherit;cursor:pointer;white-space:pre-wrap}
+.dl-line:hover{color:var(--accent)}
+.slides{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}
+.slide{flex:0 0 200px;margin:0;display:flex;flex-direction:column;gap:6px;scroll-snap-align:start}
+.slide img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:var(--sunk)}
+.fold-head{cursor:pointer;user-select:none;position:relative;padding-right:34px}
+.fold-head:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:6px}
+.fold-chev{position:absolute;right:0;top:50%;width:26px;height:26px;margin-top:-13px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--muted);background:var(--sunk);transition:transform .2s}
+.fold-head:hover .fold-chev{color:var(--fg)}
+.panel.collapsed{gap:0}
+.panel.collapsed>:not(.fold-head){display:none!important}
+.panel:not(.collapsed)>.fold-head .fold-chev{transform:rotate(180deg)}
+.foldbar{display:flex;justify-content:flex-end;gap:4px;margin:-8px 0 10px}
+.strip-toggle{display:none}
+.strip-sum{display:none}
+@media (max-width:900px){
+  .strip-in{padding-block:8px;gap:8px}
+  .strip-toggle{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;flex:none;transition:transform .2s}
+  .strip:not(.mini) .strip-toggle{transform:rotate(180deg)}
+  .strip.mini .strip-extra,.strip.mini .strip-pills{display:none!important}
+  .strip.mini .strip-sum{display:block;font:500 12px var(--f-body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .strip.mini h1{font-size:16px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="shell">
+  <aside class="rail" aria-label="Navigazione">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="9" fill="var(--accent)"/><path d="M11 9h9a3 3 0 0 1 3 3v13l-4.5-2.6L14 25V12" fill="none" stroke="var(--accent-ink)" stroke-width="2" stroke-linejoin="round"/><path d="M11 9v14" stroke="var(--accent-ink)" stroke-width="2" stroke-linecap="round"/></svg>
+      <div><b>Archive Deck Lab</b><small>Grand Archive · PRD</small></div>
+    </div>
+    <div class="deckbox">
+      <label class="label" for="deckSel">Lista attiva</label>
+      <select id="deckSel"></select>
+      <div class="row"><button class="btn sm" data-act="new" type="button">+ Nuova</button><button class="btn sm ghost" data-act="dup" type="button">Duplica</button><button class="btn sm ghost" data-act="del" type="button">Elimina</button></div>
+    </div>
+    <nav class="nav" id="nav" role="tablist"></nav>
+    <div class="rail-foot" id="railFoot"></div>
+  </aside>
+  <div class="work">
+    <div class="topbar pad">
+      <svg width="28" height="28" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="1" width="32" height="32" rx="9" fill="var(--accent)"/><path d="M11 9h9a3 3 0 0 1 3 3v13l-4.5-2.6L14 25V12" fill="none" stroke="var(--accent-ink)" stroke-width="2" stroke-linejoin="round"/><path d="M11 9v14" stroke="var(--accent-ink)" stroke-width="2" stroke-linecap="round"/></svg>
+      <select id="deckSelM" aria-label="Lista attiva"></select>
+      <button class="btn sm" data-act="new" type="button" aria-label="Nuova lista">+</button>
+    </div>
+    <div class="strip"><div class="strip-in pad" id="strip"></div></div>
+    <main class="pad" id="view"></main>
+  </div>
+</div>
+<nav class="tabbar" id="tabbar" role="tablist"></nav>
+<div class="toast" id="toast" hidden></div>
+<div class="modal" id="cardModal" hidden role="dialog" aria-modal="true" aria-labelledby="cmTitle"><div class="modal-in"><button class="modal-x" id="cmClose" type="button" aria-label="Chiudi">✕</button><div class="cardimg" id="cmImg" role="img"></div><div class="modal-side" id="cmSide"></div></div></div>
+<datalist id="allCards"></datalist>
+
+<script>
+const DATA=/*__DATA__*/null;
+const IC={
+ lista:'<path d="M4 6h12M4 10h12M4 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+ analisi:'<path d="M4 16V9M9 16V5M14 16v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+ matchup:'<path d="M4 4l6 6M16 4l-6 6M7 13l-3 3M13 13l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="10" r="1.6" fill="currentColor"/>',
+ meta:'<circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M10 3.5v6.5l4.5 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>',
+ report:'<path d="M5 3h7l3 3v11H5z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/><path d="M8 10l1.5 1.5L12.5 8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+ regole:'<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H16v12H5.5A1.5 1.5 0 0 0 4 16.5zM4 16.5A1.5 1.5 0 0 0 5.5 18H16" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/>',
+ spark:'<path d="M10 2l1.8 4.6L16.5 8l-4.7 1.6L10 14l-1.8-4.4L3.5 8l4.7-1.4z" fill="currentColor"/>'};
+const svg=(k,s=20)=>`<svg width="${s}" height="${s}" viewBox="0 0 20 20" aria-hidden="true">${IC[k]}</svg>`;
+const TABS=[["lista","Lista"],["analisi","Analisi"],["matchup","Matchup"],["meta","Meta"],["report","Report"],["regole","Regole"]];
+
+/* ---------- database carte ---------- */
+const LOWER=new Map();
+for(const r of DATA.cards){const c={name:r[0],types:r[1],sub:r[2],el:r[3],mem:r[4],res:r[5],lvl:r[6],pow:r[7],life:r[8],dur:r[9],speed:r[10],limit:r[11],fx:r[12],cls:r[13]||"",img:r[14]??-1,slug:r[15]||"",kw:r[16]||[],use:r[17]||[]};LOWER.set(c.name.toLowerCase(),c)}
+const card=n=>LOWER.get(String(n).toLowerCase().trim());
+const GLOSS=DATA.glossary||[];const kwDefs=c=>(c?.kw||[]).map(i=>GLOSS[i]).filter(Boolean);
+const ZONE_IT={M:"main",S:"side",R:"material"};
+const BASIC=["FIRE","WATER","WIND"];
+const elsOf=c=>(c?.el||"NORM").split("/").filter(Boolean);
+const dotKey=c=>{const e=elsOf(c).filter(x=>x!=="NORM"&&x!=="EXALTED");if(!e.length)return"NORM";return BASIC.includes(e[0])?e[0]:"ADV"};
+const ARCH_DOT=n=>/^Fire/.test(n)?"FIRE":/^Water/.test(n)?"WATER":/^Wind/.test(n)?"WIND":"NORM";
+const EL_IT={FIRE:"Fuoco",WATER:"Acqua",WIND:"Vento",NORM:"Norm",UMBRA:"Umbra",TERA:"Tera",EXALTED:"Exalted",ASTRA:"Astra",EXIA:"Exia",ARCANE:"Arcane",CRUX:"Crux",LUXEM:"Luxem",NEOS:"Neos"};
+const isChamp=c=>!!c&&/CHAMPION/.test(c.types);
+const isMaterialType=c=>!!c&&/CHAMPION|REGALIA/.test(c.types);
+const costOf=c=>c?(c.res!=null?c.res:c.mem):null;
+const costBadge=c=>!c?"":c.res!=null?`<span class="cost res" title="Costo reserve">${c.res}</span>`:c.mem!=null?`<span class="cost mem" title="Costo memory">${c.mem}</span>`:"";
+const typeIT=t=>t.split("/").map(x=>({CHAMPION:"Champion",REGALIA:"Regalia",ALLY:"Ally",ACTION:"Action",ATTACK:"Attack",ITEM:"Item",WEAPON:"Weapon",DOMAIN:"Domain",PHANTASIA:"Phantasia",UNIQUE:"Unique",MASTERY:"Mastery",TOKEN:"Token"}[x]||x.toLowerCase())).join(" · ");
+function lev(a,b){if(Math.abs(a.length-b.length)>4)return 99;const m=[];for(let i=0;i<=b.length;i++)m[i]=[i];for(let j=0;j<=a.length;j++)m[0][j]=j;for(let i=1;i<=b.length;i++)for(let j=1;j<=a.length;j++)m[i][j]=Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(b[i-1]===a[j-1]?0:1));return m[b.length][a.length]}
+function closest(n){n=n.toLowerCase();let best=null,bd=99;for(const k of LOWER.keys()){if(n.length>3&&k.startsWith(n))return LOWER.get(k).name;const d=lev(n,k);if(d<bd){bd=d;best=k}}return bd<=4?LOWER.get(best).name:null}
+const lineageReq=c=>{const m=c?.fx.match(/^([A-Z][\w' ]+?) Lineage\b/);return m?m[1]:null};
+const champName=c=>c.name.split(",")[0].trim();
+const NUMW={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10};
+
+/* ---------- ruoli ---------- */
+const ROLES=["Rimozione","Interazione","Pescata/Valore","Difesa","Finisher","Memoria/Rampa","Engine","Tech"];
+function autoRoles(c){if(!c||isMaterialType(c))return[];const t=c.fx.toLowerCase(),r=new Set();
+  if(/destroy target|banish target|deals? \d+ damage to (target|each) (ally|unit)|sacrifices? (a|an|target)|return target .* to its owner/.test(t))r.add("Rimozione");
+  if(/negate|can't (activate|attack|be activated)|counter|suppress|interrupt/.test(t)||String(c.speed).toLowerCase()==="true"||String(c.speed).toLowerCase()==="fast")r.add("Interazione");
+  if(/draw (a|an|one|two|three|\d+) cards?|glimpse \d|look at the top|search your|you may put .* into your hand/.test(t))r.add("Pescata/Valore");
+  if(/prevent (the next|all|\d+)|recover \d+|gets? \+\d+ life|can't be attacked|intercept|taunt/.test(t))r.add("Difesa");
+  if(/floating memory|costs? \d+ less|reduce[sd]? .{0,30}cost|efficiency/.test(t))r.add("Memoria/Rampa");
+  if(/ATTACK/.test(c.types)&&(c.pow||0)>=5)r.add("Finisher");
+  if(/can't be prevented|loses the game/.test(t))r.add("Finisher");
+  return[...r]}
+
+/* ---------- meta ---------- */
+const COLS=DATA.meta.map(m=>m.n),TOP=DATA.top,META=Object.fromEntries(DATA.meta.map(m=>[m.n,m]));
+const WIN_LAB={season:"Stagione",d30:"Ultimi 30 giorni",d15:"Ultimi 15 giorni"};
+const curWin=()=>S&&S.win&&(S.win==="season"||DATA.win?.[S.win])?S.win:"season";
+function mstat(n){const s=META[n],w=curWin();if(w==="season")return s?{decks:s.decks,share:s.share,wr:s.wr,adj:s.adj}:null;const v=DATA.win[w].meta[n];return v?{decks:v[0],share:v[1],wr:v[2],adj:null,m:v[3]}:{decks:0,share:0,wr:null,adj:null,m:0}}
+/* head-to-head: [WR (shrunk), match, WR grezzo, WR corretto per Elo, V, S, P, fonte] — nel periodo scelto se ci sono almeno 8 match, altrimenti stagione */
+const mxSeason=(r,c)=>{const v=DATA.h2h[r]?.[c];return v?[v[5],v[0],v[4],v[6],v[1],v[2],v[3],"season"]:null};
+const mxVal=(r,c)=>{const w=curWin();if(w!=="season"){const v=DATA.win[w].h2h?.[r]?.[c];if(v&&v[0]>=8)return[v[5],v[0],v[4],null,v[1],v[2],v[3],w]}return mxSeason(r,c)};
+const champOf=n=>META[n]?.ch?.[0]?.[0]||"";let TOPW=[];
+const otherShare=()=>Math.max(0,Math.round((100-COLS.reduce((s,n)=>s+(mstat(n)?.share||0),0))*10)/10);
+const defaultMeta=()=>COLS.map(n=>({id:n,share:mstat(n)?.share||0})).sort((a,b)=>b.share-a.share).concat([{id:"altro",share:otherShare()}]);
+const archLabel=id=>id==="altro"?"Altro (archetipi minori)":id;
+const DEFAULT_SETTINGS={hand:7,rounds:6,targets:{"Rimozione":6,"Interazione":8,"Difesa":0,"Pescata/Valore":6}};
+
+/* ---------- stato ---------- */
+const uid=()=>Math.random().toString(36).slice(2,9);
+const freshDeck=(name,text,arch)=>({id:uid(),name:name||"Nuova lista",text:text||"",arch:arch||"",cards:{},matchups:{},aiAnalysis:"",updated:Date.now()});
+function exampleDeck(){const F=DATA.featured;const o=F?{deck:F.arch,player:F.player,list:F.list,arch:COLS.includes(F.arch)?F.arch:""}:{...DATA.osaka[0],arch:""};const d=freshDeck(`${o.deck} · ${o.player}`,o.list,o.arch);d.example=true;return d}
+let S;
+function load(){try{const raw=localStorage.getItem("gadl.v2");if(raw)S=JSON.parse(raw)}catch(e){}
+  if(!S||!S.decks){const d=exampleDeck();S={decks:{[d.id]:d},current:d.id,win:DATA.win?.d30?"d30":"season",metaVer:0,meta:null,settings:structuredClone(DEFAULT_SETTINGS),tab:"lista",sel:null}}
+  fix()}
+function fix(){if(!S.meta)S.meta=[];if(!S.win)S.win=DATA.win?.d30?"d30":"season";if(S.metaVer!==4){S.meta=defaultMeta();S.metaVer=4}S.settings=Object.assign(structuredClone(DEFAULT_SETTINGS),S.settings||{});S.settings.targets=Object.assign({},DEFAULT_SETTINGS.targets,S.settings.targets||{});if(!S.meta)S.meta=defaultMeta();if(!S.decks[S.current])S.current=Object.keys(S.decks)[0];if(!TABS.some(t=>t[0]===S.tab))S.tab="lista"}
+let saveT;const save=()=>{clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem("gadl.v2",JSON.stringify(S))}catch(e){}},250)};
+const deck=()=>S.decks[S.current];
+function mu(id){const d=deck();if(!d.matchups[id])d.matchups[id]={manual:null,games:[],plan:{in:"",out:"",notes:""}};return d.matchups[id]}
+
+/* ---------- utility ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pct=x=>x==null||isNaN(x)?"—":Math.round(x*100)+"%";
+const pct1=x=>x==null||isNaN(x)?"—":(x*100).toFixed(1)+"%";
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(t._t);t._t=setTimeout(()=>t.hidden=true,2400)}
+function parseList(text){const out={material:[],main:[],side:[]};let sec="main";
+  for(const raw of String(text||"").split(/\r?\n/)){const line=raw.trim();if(!line||line.startsWith("//"))continue;
+    const h=line.replace(/^#+\s*/,"").replace(/[:\-–]+$/,"").trim().toLowerCase();
+    if(/^#/.test(line)||(!/^\d/.test(line)&&/^(material|materiale|main|mazzo|principale|side|sideboard)\b/.test(h))){if(/material/.test(h))sec="material";else if(/side/.test(h))sec="side";else if(/main|mazzo|principale/.test(h))sec="main";continue}
+    const m=line.match(/^(\d+)\s*[x×]?\s+(.+)$/i);const qty=m?parseInt(m[1],10):1;let name=(m?m[2]:line).trim();const c=card(name);if(c)name=c.name;
+    const ex=out[sec].find(x=>x.name.toLowerCase()===name.toLowerCase());if(ex)ex.qty+=qty;else out[sec].push({name,qty})}
+  return out}
+const sum=a=>a.reduce((s,c)=>s+c.qty,0);
+const parseQty=t=>parseList("# Main\n"+(t||"")).main;
+function pAtLeast1(N,k,n){if(k<=0||N<=0)return 0;n=Math.min(n,N);if(N-k<n)return 1;let p=1;for(let i=0;i<n;i++)p*=(N-k-i)/(N-i);return 1-p}
+const rolesOf=(d,name)=>{const u=d.cards[name]?.roles;return u?{roles:u,auto:false}:{roles:autoRoles(card(name)),auto:true}};
+const fromAttr=s=>new DOMParser().parseFromString(s,"text/html").documentElement.textContent;
+
+/* ---------- regolamento: costruzione del mazzo (Comprehensive Rules) ---------- */
+function handSize(L){const z=L.material.map(c=>card(c.name)).find(c=>isChamp(c)&&c.lvl===0);if(!z)return S.settings.hand;const m=z.fx.match(/draw (\w+) cards?/i);if(!m)return S.settings.hand;return NUMW[m[1].toLowerCase()]||parseInt(m[1])||S.settings.hand}
+function legality(L){const R=[];const add=(id,ok,t,p,lvl)=>R.push({id,ok,lvl:ok?"good":(lvl||"bad"),t,p});
+  const all=[...L.material,...L.main,...L.side];
+  const unknown=all.filter(c=>!card(c.name));
+  add("index",!unknown.length,"Nomi presenti nell'Index",unknown.length?unknown.map(c=>{const s=closest(c.name);return`“${c.name}”${s?` → forse “${s}”`:""}`}).join("; "):"Tutte le carte corrispondono a una carta dell'Index ufficiale.");
+  const N=sum(L.main);add("main",N>=60,"Main deck di almeno 60 carte",N>=60?`${N} carte.`:`${N} carte: ne mancano ${60-N}.`);
+  const over=L.main.filter(c=>c.qty>4);add("copies",!over.length,"Massimo 4 copie per nome nel main",over.length?over.map(c=>`${c.qty}× ${c.name}`).join(", "):"Nessuna carta oltre le 4 copie.");
+  const M=sum(L.material),dupM=L.material.filter(c=>c.qty>1);add("material",M<=12&&!dupM.length,"Material deck: massimo 12 carte, una copia per nome",`${M} carte${dupM.length?`; doppie: ${dupM.map(c=>c.name).join(", ")}`:""}.`);
+  const wrongMat=L.material.filter(c=>card(c.name)&&!isMaterialType(card(c.name))),wrongMain=L.main.filter(c=>isMaterialType(card(c.name)));
+  add("zones",!wrongMat.length&&!wrongMain.length,"Champion e regalia solo nel material deck",[wrongMat.length?`Nel material ma non sono champion o regalia: ${wrongMat.map(c=>c.name).join(", ")}`:"",wrongMain.length?`Nel main ma sono champion o regalia: ${wrongMain.map(c=>c.name).join(", ")}`:""].filter(Boolean).join(". ")||"Zone corrette.");
+  const champs=L.material.map(c=>card(c.name)).filter(isChamp);const lv0=champs.filter(c=>c.lvl===0);
+  add("lv0",lv0.length>0,"Almeno un champion di livello 0",lv0.length?lv0.map(c=>c.name).join(", "):"Serve uno Spirit di livello 0: è il champion con cui inizi e ti dà la mano iniziale.");
+  const pathIssues=[];for(const c of champs.filter(c=>c.lvl>=1)){const prev=champs.filter(p=>p.lvl===c.lvl-1);const req=lineageReq(c);
+    if(!prev.length)pathIssues.push(`${c.name} (Lv ${c.lvl}) senza un champion di Lv ${c.lvl-1}`);else if(req&&!prev.some(p=>champName(p)===req))pathIssues.push(`${c.name} richiede un “${req}” di Lv ${c.lvl-1}`)}
+  add("lineage",!pathIssues.length,"Percorso di level up coerente",pathIssues.length?pathIssues.join("; ")+". Si sale solo di un livello alla volta (N→N+1) rispettando il keyword Lineage, salvo effetti che fanno salire di livello.":"Ogni champion ha un livello precedente valido.","warn");
+  const en=new Set(["NORM"]);champs.forEach(c=>elsOf(c).forEach(e=>en.add(e)));const hasAdv=[...en].some(e=>!BASIC.includes(e)&&e!=="NORM");if(hasAdv)en.add("EXALTED");
+  const elBad=all.filter(x=>{const c=card(x.name);return c&&!isChamp(c)&&elsOf(c).some(e=>!en.has(e))});
+  add("elements",!elBad.length,"Elementi abilitati dai champion",elBad.length?elBad.map(x=>{const c=card(x.name);return`${c.name} (${elsOf(c).filter(e=>!en.has(e)).map(e=>EL_IT[e]||e).join("/")})`}).join(", ")+". Puoi tenerle nel mazzo, ma non puoi giocarle o materializzarle senza un champion di quell'elemento nella lineage (Exalted richiede un champion di elemento avanzato). Verifica che entrino in campo tramite effetti di altre carte.":`Abilitati: ${[...en].map(e=>EL_IT[e]||e).join(", ")}.`,"warn");
+  const classes=new Set(champs.filter(c=>c.lvl>0).flatMap(c=>c.cls.split("/").filter(Boolean)));const maxLv=Math.max(-1,...champs.map(c=>c.lvl??0));
+  const locks=[];for(const x of all){const c=card(x.name);if(!c)continue;if(/Class Locked/i.test(c.fx)){const cc=c.cls.split("/").filter(Boolean);if(cc.length&&!cc.some(k=>classes.has(k)))locks.push(`${c.name}: classe ${cc.join("/")} assente tra i tuoi champion`)}
+    const lm=c.fx.match(/Level Locked (\d)/i);if(lm&&maxLv<+lm[1])locks.push(`${c.name}: serve un champion di livello base ${lm[1]}+`)}
+  add("locks",!locks.length,"Class Locked e Level Locked rispettati",locks.length?locks.join("; "):"Nessuna carta bloccata da classe o livello.");
+  const relics=L.material.filter(c=>/Divine Relic/.test(card(c.name)?.fx||""));add("relic",relics.length<=1,"Al massimo una Divine Relic nel material",relics.length?relics.map(c=>c.name).join(", "):"Nessuna Divine Relic.");
+  const sc=sum(L.side),sp=L.side.reduce((s,c)=>s+c.qty*(isMaterialType(card(c.name))?3:1),0);
+  add("side",sc<=15&&sp<=15,"Sideboard: massimo 15 carte e 15 punti",`${sc} carte, ${sp} punti (carte da main 1 punto, regalia e champion 3).`);
+  const banned=all.filter(x=>card(x.name)?.limit===0),lim=[];all.forEach(x=>{const c=card(x.name);if(c&&c.limit>0){const t=all.filter(y=>y.name===x.name).reduce((s,y)=>s+y.qty,0);const tag=`${c.name} (max ${c.limit})`;if(t>c.limit&&!lim.includes(tag))lim.push(tag)}});
+  add("ban",!banned.length&&!lim.length,"Nessuna carta bandita o oltre il limite",banned.length||lim.length?[...banned.map(x=>x.name+" è bandita"),...lim].join("; "):"Legalità Standard rispettata secondo l'Index ufficiale.");
+  return R}
+
+/* ---------- analisi strategica ---------- */
+function validatePlan(L,plan){const pin=parseQty(plan.in),pout=parseQty(plan.out),w=[];
+  const main=new Map(L.main.map(c=>[c.name,c.qty])),mat=new Map(L.material.map(c=>[c.name,c.qty])),side=new Map(L.side.map(c=>[c.name,c.qty]));
+  for(const c of pin){const h=side.get(c.name)||0;if(!h)w.push(`“${c.name}” non è in sideboard`);else if(c.qty>h)w.push(`entrano ${c.qty} “${c.name}”, in sideboard ce ne sono ${h}`)}
+  for(const c of pout){const h=(main.get(c.name)||0)+(mat.get(c.name)||0);if(!h)w.push(`“${c.name}” non è nel mazzo`);else if(c.qty>h)w.push(`escono ${c.qty} “${c.name}”, ne hai ${h}`)}
+  if(w.length)return w;
+  for(const c of pout){if(mat.has(c.name))mat.set(c.name,mat.get(c.name)-c.qty);else main.set(c.name,main.get(c.name)-c.qty)}
+  for(const c of pin){const k=card(c.name);if(isMaterialType(k))mat.set(c.name,(mat.get(c.name)||0)+c.qty);else main.set(c.name,(main.get(c.name)||0)+c.qty)}
+  const mn=[...main.values()].reduce((a,b)=>a+b,0),mt=[...mat.values()].reduce((a,b)=>a+b,0);
+  if(mn<60)w.push(`dopo il side il main ha ${mn} carte`);if(mt>12)w.push(`dopo il side il material ha ${mt} carte`);
+  [...main].filter(([,q])=>q>4).forEach(([n,q])=>w.push(`dopo il side ${q}× ${n}`));[...mat].filter(([,q])=>q>1).forEach(([n])=>w.push(`${n} doppia nel material`));
+  return w}
+function analyze(d){const L=parseList(d.text),st=S.settings,issues=[];const N=sum(L.main);const H=handSize(L);
+  const rules=legality(L);const roles={};ROLES.forEach(r=>roles[r]=0);const curve={};let cs=0,cn=0;const els={};
+  for(const c of L.main){rolesOf(d,c.name).roles.forEach(r=>roles[r]+=c.qty);const k=card(c.name);if(k){const v=costOf(k);if(v!=null){const b=Math.min(v,5);curve[b]=(curve[b]||0)+c.qty;cs+=v*c.qty;cn+=c.qty}const e=dotKey(k);els[e]=(els[e]||0)+c.qty}}
+  if(N){
+   if(N>60){const best=Math.max(...L.main.map(c=>c.qty));issues.push({lvl:"warn",t:`${N-60} carte sopra il minimo`,p:`Una carta a ${best} copie è in mano iniziale il ${pct(pAtLeast1(N,best,H))} delle volte invece del ${pct(pAtLeast1(60,best,H))} con 60. Conviene solo contro Mill, perché si perde pescando da un mazzo vuoto.`})}
+   const singles=L.main.filter(c=>c.qty===1);if(singles.length>=5)issues.push({lvl:"warn",t:`${singles.length} carte a 1 copia`,p:`Una singola è in mano iniziale solo il ${pct(pAtLeast1(N,1,H))} delle volte. Valuta di consolidare: ${singles.slice(0,5).map(c=>c.name).join(", ")}${singles.length>5?"…":""}.`});
+   for(const [r,tg] of Object.entries(st.targets||{})){if(!tg)continue;const n=roles[r]||0;if(n<tg)issues.push({lvl:"warn",t:`${r}: ${n} carte (obiettivo ${tg})`,p:`Probabilità di vederne una entro il tuo turno 3 on the play: ${pct(pAtLeast1(N,n,H+2))}. Con ${tg} sarebbe ${pct(pAtLeast1(N,tg,H+2))}.`})}
+   const heavy=Object.entries(curve).filter(([k])=>+k>=3).reduce((s,[,v])=>s+v,0);const resv=L.main.filter(c=>/Reservable/.test(card(c.name)?.fx||"")).reduce((s,c)=>s+c.qty,0);if(cn&&heavy/cn>.45&&resv<12)issues.push({lvl:"warn",t:`${heavy} carte a costo reserve 3+`,p:`Ogni carta da 3 richiede di riservare altre 3 carte dalla mano e hai solo ${resv} carte Reservable ad aiutarti: contro i mazzi aggressivi rischi di giocare una sola carta a turno.`});
+   const dupSide=L.side.filter(c=>(L.main.find(m=>m.name===c.name)?.qty||0)+c.qty>4);if(dupSide.length)issues.push({lvl:"info",t:"Copie oltre 4 tra main e sideboard",p:`${dupSide.map(c=>c.name).join(", ")}: dopo il side il main deve restare a massimo 4 copie.`});
+  }
+  const t=totShare(),used=new Set();
+  for(const a of S.meta){const m=d.matchups[a.id];const pin=parseQty(m?.plan?.in),pout=parseQty(m?.plan?.out);pin.forEach(c=>used.add(c.name.toLowerCase()));if(a.id===d.arch||a.id==="altro")continue;
+    if((+a.share||0)/t>=.04&&!pin.length&&!pout.length)issues.push({lvl:"warn",t:`Manca il piano contro ${a.id}`,p:`${pct1((+a.share||0)/t)} del field atteso.`,go:a.id});
+    else if(pin.length||pout.length){const v=validatePlan(L,m.plan);if(v.length)issues.push({lvl:"bad",t:`Piano contro ${a.id} non valido`,p:v.join("; "),go:a.id})}}
+  const unused=L.side.filter(c=>!used.has(c.name.toLowerCase()));if(L.side.length&&unused.length)issues.push({lvl:"info",t:`${unused.length} carte di sideboard senza piano`,p:unused.map(c=>c.name).join(", ")});
+  const champs=L.material.map(c=>card(c.name)).filter(isChamp).sort((a,b)=>a.lvl-b.lvl);const regalia=L.material.map(c=>card(c.name)).filter(c=>c&&!isChamp(c));
+  const cnt=re=>L.main.filter(c=>re.test(card(c.name)?.fx||"")).reduce((s,c)=>s+c.qty,0);
+  return{L,N,H,rules,issues,roles,curve,avgCost:cn?cs/cn:null,els,champs,regalia,reservable:cnt(/Reservable/),floating:cnt(/Floating Memory/i)}}
+
+/* ---------- consenso, archetipo, win rate ---------- */
+function detectArch(L){const mine=new Map(L.main.map(c=>[c.name,c.qty])),champs=L.material.map(c=>c.name);const myCh=[...new Set(L.material.map(c=>card(c.name)).filter(c=>isChamp(c)&&c.lvl>0).map(champName))];const all=[];
+  for(const n of COLS){const cs=DATA.cons[n];let s=0;for(const [nm,p,avg] of cs.main)s+=Math.min(mine.get(nm)||0,avg)*(p/100);let ch=0;for(const [nm,p] of cs.material)if(champs.includes(nm)&&isChamp(card(nm)))ch+=p/100;const pil=(META[n]?.ch||[]).filter(x=>x[1]>=5).map(x=>x[0]);const hit=myCh.length?(pil.some(x=>myCh.includes(x))?.3:-.3):0;const score=s/60+ch*.15+hit;all.push({n,score})}
+  all.sort((a,b)=>b.score-a.score);const best=all[0];if(!best||best.score<=.3)return null;best.alts=all.slice(1,3).filter(x=>best.score-x.score<.25);return best}
+function consensusDiff(d,L){const a=d.arch&&DATA.cons[d.arch];if(!a)return null;const am=META[d.arch];const base=am?.wr??50;
+  const mine=new Map(L.main.map(c=>[c.name,c.qty])),mineSide=new Map(L.side.map(c=>[c.name,c.qty]));const consNames=new Map(a.main.map(r=>[r[0],r]));
+  return{base,decks:am?.decks,
+   missing:a.main.filter(([n,p])=>p>=70&&!mine.has(n)).map(([n,p,avg,wr])=>({n,p,avg,wr})),
+   lowQty:a.main.filter(([n,p,avg])=>p>=70&&mine.has(n)&&mine.get(n)<Math.round(avg)).map(([n,p,avg,wr])=>({n,p,avg,wr,q:mine.get(n)})),
+   flexUp:a.main.filter(([n,p,avg,wr])=>p>=10&&p<70&&!mine.has(n)&&wr>=base+1.5).map(([n,p,avg,wr])=>({n,p,avg,wr})).sort((x,y)=>y.wr-x.wr),
+   unusual:L.main.filter(c=>{const r=consNames.get(c.name);return!r||r[1]<10}).map(c=>({n:c.name,q:c.qty,p:consNames.get(c.name)?.[1]??0})),
+   sideCommon:a.side.filter(([n,p])=>p>=25&&!mineSide.has(n)&&!mine.has(n)).map(([n,p])=>({n,p}))}}
+function effWR(d,a){const m=d.matchups[a.id];const g=m?.games||[];const W=g.filter(x=>x.r==="W").length,Dr=g.filter(x=>x.r==="D").length,n=g.length,pts=W+.5*Dr;
+  if(m&&m.manual!=null&&m.manual!=="")return{wr:+m.manual/100,src:"stima manuale",n};
+  if(d.arch&&a.id===d.arch)return{wr:.5,src:"mirror",n};
+  let prior=null;if(d.arch){if(a.id==="altro"){const me=META[d.arch];if(me)prior={wr:me.adj/100,k:10,lab:"WR medio archetipo"}}else{const v=mxVal(d.arch,a.id);if(v)prior={wr:v[0]/100,k:Math.min(v[1],30),lab:`${v[7]==="season"?"stagione":WIN_LAB[v[7]].toLowerCase()} · ${v[1]} match`}}}
+  if(prior&&n)return{wr:(prior.wr*prior.k+pts)/(prior.k+n),src:"meta + tue partite",n};
+  if(prior)return{wr:prior.wr,src:prior.lab,n};
+  if(n)return{wr:(pts+1)/(n+2),src:"tue partite",n};
+  return{wr:.5,src:"ignoto",n}}
+function totShare(){return S.meta.reduce((s,a)=>s+(+a.share||0),0)||1}
+function expected(d){const t=totShare();let e=0;for(const a of S.meta)e+=(+a.share||0)/t*effWR(d,a).wr;return e}
+const binom=(n,k,p)=>{let c=1;for(let i=0;i<k;i++)c=c*(n-i)/(i+1);return c*p**k*(1-p)**(n-k)};
+function topCut(exp,R){let x1=0,x2=0;for(let k=R-1;k<=R;k++)x1+=binom(R,k,exp);for(let k=Math.max(0,R-2);k<=R;k++)x2+=binom(R,k,exp);return{x1,x2}}
+
+/* ---------- AI ---------- */
+let sampleP=null;const getSample=()=>sampleP||(sampleP=(window.claude?.use?window.claude.use("sample"):Promise.resolve(null)).catch(()=>null));
+const ERR={not_granted:"Hai negato a questa pagina l'uso di Claude. I controlli locali restano attivi.",rate_limited:"Troppe richieste o limite d'uso raggiunto. Riprova più tardi.",sampling_disabled:"Claude non è disponibile per questo account.",refused:"Claude non ha risposto a questa richiesta. Riformula la domanda.",prompt_too_large:"Testo troppo lungo: accorcia note e lista.",invalid_json:"Risposta non leggibile. Premi di nuovo per riprovare.",session_expired:"Sessione scaduta: accedi di nuovo.",empty_completion:"Nessuna risposta. Riprova con una richiesta più breve."};
+const errMsg=e=>ERR[e?.code]||"Errore temporaneo del servizio. Riprova.";
+function md(t){const lines=esc(t).split("\n");let h="",ul=false;const inl=s=>s.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/`(.+?)`/g,"<code>$1</code>");
+  for(const l of lines){const li=l.match(/^\s*[-*•]\s+(.*)/);if(li){if(!ul){h+="<ul>";ul=true}h+="<li>"+inl(li[1])+"</li>";continue}if(ul){h+="</ul>";ul=false}const hd=l.match(/^#{1,4}\s+(.*)/);if(hd){h+="<h4>"+inl(hd[1])+"</h4>";continue}if(l.trim())h+="<p>"+inl(l)+"</p>"}
+  return h+(ul?"</ul>":"")}
+const short=(s,n)=>s.length>n?s.slice(0,n)+"…":s;
+function cardLine(name,qty){const k=card(name);if(!k)return`${qty?qty+" ":""}${name} [non trovata nell'Index]`;
+  const stats=[k.types,k.sub,elsOf(k).map(e=>EL_IT[e]||e).join("/"),k.res!=null?"reserve "+k.res:"",k.mem!=null?"memory "+k.mem:"",k.lvl!=null?"lv "+k.lvl:"",k.pow!=null?"power "+k.pow:"",k.life!=null?"life "+k.life:"",k.dur!=null?"dur "+k.dur:""].filter(Boolean).join(", ");
+  return`${qty?qty+" ":""}${k.name} (${stats}): ${k.fx.replace(/\s*\n\s*/g," / ")}`}
+const RULES_PRIMER=`REGOLE CHIAVE (Comprehensive Rules di Grand Archive):
+- Costruzione Standard: main ≥60 carte, max 4 copie per nome; material deck ≤12 carte uniche (solo champion e regalia) con almeno un champion Lv0 e al massimo una Divine Relic; sideboard ≤15 carte e ≤15 punti (carte da main 1 punto, regalia/champion 3).
+- Inizio: si rivela lo Spirit Lv0, il suo On Enter dà la mano iniziale (di solito 7). In 2 giocatori chi inizia salta la draw phase del primo turno; nel primo turno nessuno materializza e solo il secondo giocatore può attaccare.
+- Turno: Wake Up → Materialize (una carta dal material pagando il costo memory) → Recollection (tutta la memoria torna in mano) → Draw (1 carta) → Main → End.
+- Costo reserve N: metti N ALTRE carte dalla mano a faccia in giù nella memoria (tornano alla Recollection); gli oggetti Reservable possono pagarne 1 riposandosi. Costo memory N (material): banisci N carte casuali dalla memoria; Floating Memory permette di banire quella carta dal cimitero al posto di una.
+- Champion: si sale solo di livello N→N+1; il keyword Lineage obbliga a salire da un champion con lo stesso nome. Gli Inherited Effect restano attivi finché la carta è nella lineage.
+- Elementi: Norm sempre abilitato; gli altri si abilitano con i champion della lineage; Exalted richiede un champion di elemento avanzato. Le carte non-champion non abilitano elementi.
+- Class Locked / Level Locked / Class Bonus / Element Bonus / Champion Bonus dipendono dal champion.
+- Si perde se il champion muore o pescando da un mazzo vuoto (rilevante contro Mill).
+- Slow: solo nel proprio main phase a stack vuoto (allies e attack sono slow). Fast: ogni volta che si ha Opportunity.`;
+function deckContext(d){const L=parseList(d.text);const f=a=>a.map(c=>cardLine(c.name,c.qty)).join("\n");const t=totShare();
+  const metaTxt=S.meta.map(a=>{const e=effWR(d,a);return`- ${archLabel(a.id)}: ${pct1((+a.share||0)/t)} del field; win rate stimato ${pct(e.wr)} (${e.src})`}).join("\n");
+  const rules=legality(L).filter(r=>!r.ok).map(r=>`- ${r.t}: ${r.p}`).join("\n");
+  const kws=new Map();[...L.material,...L.main,...L.side].forEach(c=>kwDefs(card(c.name)).forEach(g=>kws.set(g[0],g[2])));
+  const gl=[...kws].map(([k,v])=>`- ${k}: ${short(v,420)}`).join("\n");
+  return`ARCHETIPO DEL GIOCATORE: ${d.arch||"non classificato"}\nMANO INIZIALE: ${handSize(L)} carte\n\nMATERIAL DECK:\n${f(L.material)||"(vuoto)"}\n\nMAIN DECK (${sum(L.main)}):\n${f(L.main)}\n\nSIDEBOARD (${sum(L.side)}):\n${f(L.side)||"(vuoto)"}\n\nPROBLEMI DI LEGALITÀ RILEVATI:\n${rules||"nessuno"}\n\nGLOSSARIO UFFICIALE DELLE PAROLE CHIAVE PRESENTI NELLA LISTA:\n${gl||"(nessuna)"}\n\nMETA ATTESO (periodo: ${WIN_LAB[curWin()]}, stagione ${DATA.snap.season}, dati al ${DATA.snap.date}):\n${metaTxt}`}
+function oppKeyCards(d,n=6){const t=totShare();const opps=S.meta.filter(a=>a.id!==d.arch&&DATA.cons[a.id]).sort((x,y)=>y.share-x.share).slice(0,n);const seen=new Set();
+  return opps.map(a=>{const c=DATA.cons[a.id];const ks=[...c.main.filter(r=>r[1]>=60),...c.side.filter(r=>r[1]>=35)].filter(r=>!seen.has(r[0]));ks.forEach(r=>seen.add(r[0]));
+    return`== ${a.id} (${pct1((+a.share||0)/t)} del field) ==\n`+ks.map(r=>`${cardLine(r[0])} [in ${Math.round(r[1])}% delle liste, ${r[2]}×]`).join("\n")}).join("\n\n")}
+function consText(n){const c=DATA.cons[n];if(!c)return"";
+  return`LISTA DI CONSENSO di ${n} (${META[n]?.decks||"?"} liste; % = quota di liste che giocano la carta, × = copie medie):\nMaterial: ${c.material.filter(r=>r[1]>=30).map(r=>`${r[0]} ${Math.round(r[1])}%`).join("; ")}\nMain:\n${c.main.filter(r=>r[1]>=40).map(r=>`${cardLine(r[0])} [${Math.round(r[1])}%, ${r[2]}×]`).join("\n")}\nSideboard tipica: ${c.side.filter(r=>r[1]>=15).map(r=>`${r[0]} ${Math.round(r[1])}%`).join("; ")}`}
+const AGENT_RULES=`METODO DI LAVORO (obbligatorio): sei un agente con accesso al database completo delle carte. Non attribuire mai un effetto a una carta senza averne letto il testo qui o con lo strumento cerca_carta. Prima di consigliare una carta che non compare nel contesto, chiamala con cerca_carta e verifica elemento (deve essere abilitato dai champion della lista), costo, legalità e testo. Per trovare sostituti o tech usa cerca_testo (ricerca nel testo di tutte le 2.500 carte) e poi verifica i candidati. Per i dettagli di un avversario usa archetipo; per un dubbio di regolamento usa regola. Se un'informazione non è verificabile, dillo.`;
+const AI_TOOLS=status=>[
+ {name:"cerca_carta",description:"Restituisce testo ufficiale completo, tipo, elemento, costi, statistiche, legalità, definizioni delle parole chiave e in quali archetipi è giocata (con %) per una carta. Accetta il nome anche approssimato.",inputSchema:{type:"object",properties:{nome:{type:"string"}},required:["nome"]},
+  execute:({nome})=>{const n=String(nome||"");const c=card(n)||card(closest(n)||"");status(`legge ${c?c.name:n}`);if(!c)throw new Error("Carta non trovata nell'Index: "+n);
+   return{nome:c.name,tipo:c.types,sottotipi:c.sub,classi:c.cls,elementi:c.el,reserve:c.res,memory:c.mem,livello:c.lvl,power:c.pow,life:c.life,durability:c.dur,speed:c.speed,legalita:c.limit===0?"BANDITA in Standard":c.limit>0?`limitata a ${c.limit}`:"legale",testo:c.fx,parole_chiave:kwDefs(c).map(g=>({nome:g[0],definizione:short(g[2],500)})),giocata_in:c.use.map(u=>`${u[0]} (${ZONE_IT[u[1]]}, ${u[2]}% delle liste, ${u[3]}×)`)}}},
+ {name:"cerca_testo",description:"Cerca nel nome e nel testo di tutte le carte (es. 'negate', 'draw two cards', 'banish target ally'). Filtri opzionali: elemento (FIRE, WATER, WIND, NORM o avanzato), tipo (ACTION, ALLY, ATTACK, ITEM, REGALIA...), costo_max. Restituisce fino a 20 carte legali con un estratto.",inputSchema:{type:"object",properties:{testo:{type:"string"},elemento:{type:"string"},tipo:{type:"string"},costo_max:{type:"number"}},required:["testo"]},
+  execute:({testo,elemento,tipo,costo_max})=>{const q=String(testo||"").toLowerCase();status(`cerca “${q}”`);const el=elemento?String(elemento).toUpperCase():null,ty=tipo?String(tipo).toUpperCase():null;const out=[];
+   for(const c of LOWER.values()){if(c.limit===0||/TOKEN/.test(c.types))continue;if(!(c.fx.toLowerCase().includes(q)||c.name.toLowerCase().includes(q)))continue;if(el&&!elsOf(c).includes(el))continue;if(ty&&!c.types.includes(ty))continue;const v=costOf(c);if(costo_max!=null&&v!=null&&v>+costo_max)continue;
+    out.push({nome:c.name,tipo:c.types,elementi:c.el,costo:c.res!=null?`reserve ${c.res}`:c.mem!=null?`memory ${c.mem}`:null,giocata_in:c.use.slice(0,3).map(u=>`${u[0]} ${u[2]}%`),estratto:short(c.fx.replace(/\s+/g," "),220)});if(out.length>=20)break}
+   return out.length?out:"Nessuna carta trovata"}},
+ {name:"archetipo",description:"Dati di un archetipo del meta: champion, quota, win rate, lista di consenso (main, sideboard, material con %), head-to-head contro l'archetipo del giocatore e lista vincente più recente.",inputSchema:{type:"object",properties:{nome:{type:"string"}},required:["nome"]},
+  execute:({nome})=>{const n=COLS.find(x=>x.toLowerCase()===String(nome).toLowerCase())||COLS.find(x=>x.toLowerCase().includes(String(nome).toLowerCase()));status(`studia ${n||nome}`);if(!n)throw new Error("Archetipo non trovato. Disponibili: "+COLS.join(", "));
+   const m=META[n],c=DATA.cons[n],d=deck(),v=d.arch?mxVal(d.arch,n):null;return{archetipo:n,champion:m.ch.slice(0,3),tier:m.tier,quota:m.share+"%",win_rate:m.wr+"%",win_rate_corretto_elo:m.adj+"%",liste:m.decks,
+    main:c.main.filter(r=>r[1]>=25).map(r=>`${r[0]} ${Math.round(r[1])}% ${r[2]}×`),sideboard:c.side.filter(r=>r[1]>=12).map(r=>`${r[0]} ${Math.round(r[1])}% ${r[2]}×`),material:c.material.filter(r=>r[1]>=25).map(r=>`${r[0]} ${Math.round(r[1])}%`),
+    head_to_head_col_giocatore:v?`${d.arch} vince il ${v[0]}% (${v[4]}-${v[5]}-${v[6]} su ${v[1]} match)`:"non disponibile",lista_vincente:c.best?.list||""}}},
+ {name:"regola",description:"Definizione ufficiale (Comprehensive Rules) di una parola chiave o di un termine di gioco, es. Imbue, Reservable, Floating Memory, Lineage, Glimpse, Suppress.",inputSchema:{type:"object",properties:{parola:{type:"string"}},required:["parola"]},
+  execute:({parola})=>{const q=String(parola||"").toLowerCase();status(`regola ${parola}`);const g=GLOSS.filter(x=>x[0].toLowerCase().includes(q)).slice(0,3);if(!g.length)throw new Error("Voce non trovata nel glossario");return g.map(x=>({voce:x[0],definizione:x[2]}))}}];
+const PREAMBLE=`Sei un coach competitivo di Grand Archive TCG. Rispondi in italiano, in modo concreto. Usa i nomi delle carte in inglese esattamente come scritti qui. I testi delle carte vengono dall'Index ufficiale (api.gatcg.com): basati su quelli, rispetta le regole qui sotto e non inventare carte o effetti. Le statistiche vengono da grandarchivestats.com.\n\n${RULES_PRIMER}\n\n${AGENT_RULES}`;
+let toolsOK=null;async function canTools(sample){if(toolsOK!==null)return toolsOK;try{toolsOK=!!(await sample.limits())?.tools}catch(_){toolsOK=false}return toolsOK}
+async function runAI(btn,out,prompt,opts={}){const sample=await getSample();
+  if(!sample){out.hidden=false;out.innerHTML=`<p class="muted" style="margin:0">L'analisi con Claude non è disponibile in questa vista. I controlli locali restano attivi.</p>`;return null}
+  btn.disabled=true;out.hidden=false;const steps=[];let txt="";
+  const paint=()=>{out.innerHTML=(txt?md(txt):`<div class="thinking"><i></i>Claude sta ragionando… (fino a un paio di minuti)</div>`)+(steps.length?`<p class="src" style="margin-top:8px">Verifiche: ${steps.slice(-8).map(esc).join(" · ")}${steps.length>8?` · (+${steps.length-8})`:""}</p>`:"")};paint();
+  const ctl=new AbortController();const stop=document.createElement("button");stop.className="btn sm";stop.type="button";stop.textContent="Ferma";stop.onclick=()=>ctl.abort();btn.after(stop);
+  const useTools=await canTools(sample);const o={signal:ctl.signal,modelTier:"complex"};
+  if(useTools){o.tools=AI_TOOLS(s=>{steps.push(s);paint()})}else o.cache=false;
+  try{if(opts.json){o.onText=()=>{};return await sample.json(prompt,o)}
+    o.onText=({text})=>{txt=text;paint()};const {text,truncated}=await sample(prompt,o);txt=text;paint();
+    if(truncated)out.insertAdjacentHTML("beforeend",`<p class="muted">Risposta interrotta per lunghezza: chiedi una parte alla volta.</p>`);return text}
+  catch(e){if(e?.code==="cancelled"){txt=e.text||"";paint();if(!txt&&!steps.length)out.hidden=true;return e.text||null}
+    if(e?.code==="tools_unavailable"){toolsOK=false;btn.disabled=false;stop.remove();return runAI(btn,out,prompt,opts)}
+    out.innerHTML=(e?.text?md(e.text):"")+`<p class="muted">${esc(errMsg(e))}</p>`;return null}
+  finally{btn.disabled=false;stop.remove()}}
+
+/* ---------- shell ---------- */
+function renderShell(){const opts=Object.values(S.decks).sort((a,b)=>b.updated-a.updated).map(d=>`<option value="${d.id}" ${d.id===S.current?"selected":""}>${esc(d.name)}</option>`).join("");$("#deckSel").innerHTML=opts;$("#deckSelM").innerHTML=opts;
+  const nav=TABS.map(([k,l])=>`<button type="button" role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${svg(k)}<span>${l}</span></button>`).join("");$("#nav").innerHTML=nav;$("#tabbar").innerHTML=nav;
+  const Wn=curWin()!=="season"?DATA.win[curWin()]:null;$("#railFoot").innerHTML=`<span class="label">Dati · ${WIN_LAB[curWin()]}</span><span><b>${esc(DATA.snap.season)}</b></span><span>${Wn?`${Wn.events} eventi · ${Wn.players.toLocaleString("it-IT")} giocatori`:`${DATA.snap.decks.toLocaleString("it-IT")} liste · ${DATA.snap.events} eventi`}</span><span>${Wn?`dal ${Wn.start} al ${Wn.end}`:`Aggiornati al ${DATA.snap.date}`}</span>`;
+  const d=deck(),A=analyze(d),bad=A.rules.filter(r=>!r.ok&&r.lvl==="bad").length,warn=A.rules.filter(r=>!r.ok&&r.lvl!=="bad").length,exp=expected(d),tc=topCut(exp,S.settings.rounds);
+  const mini=S.stripMini!==false;$(".strip").classList.toggle("mini",mini);
+  $("#strip").innerHTML=`<div style="min-width:0;display:flex;align-items:center;gap:10px;flex:1 1 260px"><div style="min-width:0;flex:1;display:flex;flex-direction:column;gap:4px"><h1 title="${esc(d.name)}">${esc(d.name)}</h1>
+   <div class="strip-sum">${bad?`${bad} ${bad===1?"regola violata":"regole violate"}`:"Legale"} · WR ${pct1(exp)} · X-2 ${pct(tc.x2)} · ${WIN_LAB[curWin()]}</div>
+   <div class="row strip-pills" style="gap:6px">${d.arch?`<span class="pill neu"><span class="dot ${ARCH_DOT(d.arch)}" style="margin-right:2px"></span>${esc(d.arch)}</span>`:`<button type="button" class="pill warn" data-go="lista" style="border:0;cursor:pointer">Archetipo non impostato</button>`}${bad?`<button type="button" class="pill bad" data-go="analisi" style="border:0;cursor:pointer">${bad} ${bad===1?"regola violata":"regole violate"}</button>`:warn?`<span class="pill warn">Legale · ${warn} da verificare</span>`:`<span class="pill good">✓ Lista legale</span>`}</div></div>
+   <button type="button" class="strip-toggle" id="stripToggle" aria-expanded="${!mini}" aria-label="${mini?"Mostra periodo e indicatori":"Compatta l'intestazione"}"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+   <div class="strip-extra row" style="gap:10px 18px;flex:1 1 auto;justify-content:flex-end">
+   <div class="row" style="gap:6px"><span class="label">Periodo</span><div class="seg" role="group" aria-label="Periodo di analisi">${["season","d30","d15"].filter(k=>k==="season"||DATA.win?.[k]).map(k=>`<button type="button" data-win="${k}" class="${curWin()===k?"on":""}">${{season:"Stagione",d30:"30 giorni",d15:"15 giorni"}[k]}</button>`).join("")}</div></div>
+   <div class="kpis"><div class="kpi"><span>Main</span><b>${A.N}</b></div><div class="kpi"><span>Win rate</span><b>${pct1(exp)}</b></div><div class="kpi"><span>X-2 su ${S.settings.rounds}</span><b>${pct(tc.x2)}</b></div></div></div>`}
+const FOLD_DEFAULT=["meta:Champion della stagione","meta:Matrice dei matchup","meta:Top 8","meta:Evento più grande","analisi:Probabilità di avere","analisi:Economia di memoria","regole:Regolamento per il deckbuilding","report:Rendimento degli slot"];
+function foldKey(p){const h=p.firstElementChild;return S.tab+":"+((h.querySelector("h2,h3")||h).textContent.replace(/\s+/g," ").trim().replace(/ · .*$/,"").slice(0,48))}
+function applyFolds(v){S.folds=S.folds||{};const panels=[...v.querySelectorAll("section.panel,aside.panel")].filter(p=>{const h=p.firstElementChild;return h&&h.matches(".phead,h2,h3")});
+  panels.forEach(p=>{const h=p.firstElementChild,k=foldKey(p);h.classList.add("fold-head");h.setAttribute("role","button");h.tabIndex=0;h.insertAdjacentHTML("beforeend",`<span class="fold-chev" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 14 14"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`);
+   const col=k in S.folds?S.folds[k]:FOLD_DEFAULT.some(x=>k.startsWith(x));p.classList.toggle("collapsed",col);h.setAttribute("aria-expanded",String(!col));
+   const tog=()=>{const c=!p.classList.contains("collapsed");p.classList.toggle("collapsed",c);h.setAttribute("aria-expanded",String(!c));S.folds[k]=c;save()};
+   h.addEventListener("click",e=>{if(e.target.closest("button,a,input,select,textarea,label,.seg"))return;tog()});h.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target===h){e.preventDefault();tog()}})});
+  if(panels.length>1){v.insertAdjacentHTML("afterbegin",`<div class="foldbar"><button class="btn sm ghost" type="button" data-fold-all="0">Espandi tutto</button><button class="btn sm ghost" type="button" data-fold-all="1">Comprimi tutto</button></div>`)}}
+function render(){renderShell();const old=$("#view"),v=old.cloneNode(false);old.replaceWith(v);v.innerHTML=(VIEWS[S.tab]||VIEWS.lista)();BIND[S.tab]?.();applyFolds(v)}
+const go=t=>{S.tab=t;save();render();window.scrollTo({top:0})};
+
+/* ---------- viste ---------- */
+const archOptions=sel=>`<option value="">— non classificata —</option>`+DATA.champs.map(c=>{const list=COLS.filter(n=>champOf(n)===c.name);return list.length?`<optgroup label="${esc(c.name)}">${list.map(n=>`<option value="${esc(n)}" ${n===sel?"selected":""}>${esc(n)} · ${META[n].share}%</option>`).join("")}</optgroup>`:""}).join("");
+const heat=v=>{if(!v)return`<span class="heat h-mid">—</span>`;const [w,n,raw,adj,W,L,D]=v;return`<span class="heat ${w>=55?"h-good":w<=45?"h-bad":"h-mid"} ${n<10?"faded":""}" title="${w}% su ${n} match (${W}-${L}-${D})${adj!=null?` · corretto per Elo ${adj}%`:""} · ${v[7]==="season"?"stagione":WIN_LAB[v[7]]}">${w.toFixed(0)}%</span>`};
+const wrColor=w=>w>=.53?"var(--good)":w<.47?"var(--bad)":"var(--warn)";
+const ICO={good:"✓",warn:"!",bad:"✕",info:"i"};
+const issueLi=i=>`<li class="issue"><span class="ico ${i.lvl}">${ICO[i.lvl]}</span><div><b>${esc(i.t)}</b><p>${esc(i.p)}</p>${i.go?`<button class="btn sm ghost" data-go-mu="${esc(i.go)}" type="button" style="margin-top:4px;margin-left:-9px">Apri il matchup →</button>`:""}</div></li>`;
+
+const ci=n=>card(n)?`<button type="button" class="cname" data-ci="${esc(n)}">${esc(n)}</button>`:esc(n);
+function deckHTML(txt){return`<div class="decklist">${String(txt||"").split("\n").map(l=>{const m=l.match(/^(\d+)\s+(.+)$/);return m&&card(m[2])?`<button type="button" class="dl-line" data-ci="${esc(m[2])}">${esc(l)}</button>`:`<div>${esc(l)||"&nbsp;"}</div>`}).join("")}</div>`}
+const SHEETS=DATA.sheets,loadedSheets=new Set();let lastFocus=null,modalList=[],modalIdx=0;
+function spriteStyle(el,c){el.className="cardimg";el.style.backgroundImage="";if(!c||c.img<0){el.classList.add("noimg");return}
+  const s=Math.floor(c.img/100),i=c.img%100,rows=Math.ceil(SHEETS[s]/10),col=i%10,row=Math.floor(i/10);const url=`cards/s${String(s).padStart(2,"0")}.webp`;
+  el.style.backgroundSize=`1000% ${rows*100}%`;el.style.backgroundPosition=`${col/9*100}% ${rows>1?row/(rows-1)*100:0}%`;
+  const apply=()=>{el.classList.remove("loading");el.style.backgroundImage=`url("${url}")`};
+  if(loadedSheets.has(url))apply();else{el.classList.add("loading");const im=new Image();im.onload=()=>{loadedSheets.add(url);if(el.dataset.name===c.name)apply()};im.onerror=()=>{el.classList.remove("loading");el.classList.add("noimg")};im.src=url}}
+function openCard(name,list){const c=card(name);if(!c)return;const md=$("#cardModal");if(md.hidden)lastFocus=document.activeElement;
+  modalList=list&&list.length?list:[c.name];modalIdx=Math.max(0,modalList.indexOf(c.name));
+  const img=$("#cmImg");img.dataset.name=c.name;img.setAttribute("aria-label",c.name);spriteStyle(img,c);
+  const stats=[c.res!=null?`reserve ${c.res}`:"",c.mem!=null?`memory ${c.mem}`:"",c.lvl!=null?`level ${c.lvl}`:"",c.pow!=null?`power ${c.pow}`:"",c.life!=null?`life ${c.life}`:"",c.dur!=null?`durability ${c.dur}`:""].filter(Boolean).join(" · ");
+  $("#cmSide").innerHTML=`<div class="row" style="gap:8px;padding-right:36px">${costBadge(c)}<h2 id="cmTitle" style="font-size:19px">${esc(c.name)}</h2></div>
+   <div class="row" style="gap:6px"><span class="pill neu"><span class="dot ${dotKey(c)}" style="margin-right:2px"></span>${esc(elsOf(c).map(x=>EL_IT[x]||x).join(" / "))}</span><span class="pill neu">${esc(typeIT(c.types))}</span>${c.limit===0?'<span class="pill bad">Bandita</span>':c.limit>0?`<span class="pill warn">Limitata a ${c.limit}</span>`:""}</div>
+   ${c.sub?`<div class="note">${esc(c.sub.split("/").map(x=>x[0]+x.slice(1).toLowerCase()).join(" · "))}</div>`:""}${stats?`<div class="mono" style="font-size:12.5px;color:var(--muted)">${stats}</div>`:""}
+   <p class="fx">${esc(c.fx||"(nessun testo)")}</p>
+   ${kwDefs(c).length?`<details><summary>Parole chiave · ${kwDefs(c).map(g=>esc(g[0])).join(", ")}</summary><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">${kwDefs(c).map(g=>`<div class="note"><b style="color:var(--fg)">${esc(g[0])}</b> — ${esc(short(g[2],380))}</div>`).join("")}</div></details>`:""}
+   ${c.use.length?`<div><span class="label">Giocata in</span><div style="display:flex;flex-direction:column;gap:2px;margin-top:4px">${c.use.slice(0,6).map(u=>`<div class="row" style="flex-wrap:nowrap;gap:6px;font-size:12.5px"><span class="dot ${ARCH_DOT(u[0])}"></span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(u[0])}</span><span class="spacer"></span><span class="src">${ZONE_IT[u[1]]}</span><span class="mono" style="width:40px;text-align:right">${u[2]}%</span></div>`).join("")}</div></div>`:`<div class="src">Non presente nelle liste di consenso del meta attuale.</div>`}
+   <div class="row" style="margin-top:auto;gap:8px">${modalList.length>1?`<div class="modal-nav"><button class="btn sm" id="cmPrev" type="button" ${modalIdx<=0?"disabled":""}>← Prec.</button><button class="btn sm" id="cmNext" type="button" ${modalIdx>=modalList.length-1?"disabled":""}>Succ. →</button></div><span class="src">${modalIdx+1} di ${modalList.length}</span>`:""}<span class="spacer"></span>${c.slug?`<a class="btn sm ghost" href="https://index.gatcg.com/card/${encodeURIComponent(c.slug)}" target="_blank" rel="noopener">Index ufficiale ↗</a>`:""}</div>`;
+  md.hidden=false;document.body.style.overflow="hidden";$("#cmClose").focus()}
+function closeCard(){const md=$("#cardModal");if(md.hidden)return;md.hidden=true;document.body.style.overflow="";lastFocus?.focus?.()}
+const stepCard=dlt=>{const j=modalIdx+dlt;if(j>=0&&j<modalList.length)openCard(modalList[j],modalList)};
+const VIEWS={
+lista(){const d=deck(),L=parseList(d.text),det=detectArch(L);
+  const row=(c,sec)=>{const k=card(c.name);const {roles,auto}=rolesOf(d,c.name);const nm=esc(c.name);
+    return`<tr class="card-row" data-card="${nm}"><td class="num">${c.qty}</td><td>${k?costBadge(k):""}</td>
+    <td style="min-width:180px"><span class="dot ${k?dotKey(k):"ADV"}"></span>${k?`<button type="button" class="cname" data-ci="${nm}" title="Apri la carta">${nm}</button>`:`${nm} <span class="pill bad">non trovata</span>`}${k&&k.limit===0?' <span class="pill bad">bandita</span>':""}${k&&isChamp(k)?` <span class="pill acc">Lv ${k.lvl}</span>`:""}</td>
+    <td class="muted" style="font-size:12px;white-space:nowrap">${k?esc(typeIT(k.types)):""}</td>
+    <td>${sec!=="main"?'':`<div class="chips">${ROLES.map(r=>`<button type="button" class="chip ${roles.includes(r)?"on":""} ${auto?"auto":""}" data-role="${r}">${r}</button>`).join("")}</div>`}</td></tr>`};
+  const sec=(lab,arr,key)=>arr.length?`<tr class="sec"><td colspan="5">${lab} · ${sum(arr)}</td></tr>`+arr.map(c=>row(c,key)).join(""):"";
+  return`<div class="grid2">
+  <section class="panel">
+    <div class="phead"><h2>Decklist</h2><span class="spacer"></span><span class="pill neu">${sum(L.material)} material · ${sum(L.main)} main · ${sum(L.side)} side</span></div>
+    ${d.example?`<div class="callout">${svg("spark",16)}<div>Lista di esempio: ${DATA.featured?`la lista della settimana, ${esc(DATA.featured.arch)} di ${esc(DATA.featured.player)} (${esc(DATA.featured.event)}, ${DATA.featured.size} giocatori).`:"una lista vincente recente."} Crea la tua con “+ Nuova” oppure incolla qui la tua lista.</div></div>`:""}
+    <div class="stack" style="gap:6px"><label class="label" for="deckName">Nome</label><input id="deckName" value="${esc(d.name)}"></div>
+    <div class="stack" style="gap:6px"><label class="label" for="deckArch">Archetipo · collega la lista ai dati di matchup</label>
+    <div class="row"><select id="deckArch" style="flex:1">${archOptions(d.arch)}</select>${det&&det.n!==d.arch?`<button class="btn sm primary useDet" type="button" data-n="${esc(det.n)}">Riconosciuta: ${esc(det.n)}</button>`:""}</div>${det&&det.alts.length&&(det.n!==d.arch||det.alts.some(x=>x.n!==d.arch))?`<div class="row" style="gap:6px"><span class="src">${det.n===d.arch?"Simile anche a":"Oppure"}:</span>${det.alts.filter(x=>x.n!==d.arch).map(x=>`<button class="btn sm ghost useDet" type="button" data-n="${esc(x.n)}">${esc(x.n)}</button>`).join("")}</div>`:""}</div>
+    <div class="stack" style="gap:6px"><label class="label" for="deckText">Lista · formato export Omnidex</label>
+    <textarea id="deckText" rows="18" spellcheck="false" placeholder="# Material Deck&#10;1 Spirit of Water&#10;&#10;# Main Deck&#10;4 Fractal of Insight&#10;&#10;# Sideboard">${esc(d.text)}</textarea></div>
+    <div class="row"><input id="addName" list="allCards" placeholder="Cerca una carta da aggiungere…" style="flex:1;min-width:170px" aria-label="Carta da aggiungere"><input id="addQty" type="number" min="1" max="4" value="1" aria-label="Quantità" style="width:60px"><div class="seg" id="addSec" role="group" aria-label="Sezione"><button type="button" class="on" data-v="main">Main</button><button type="button" data-v="side">Side</button><button type="button" data-v="material">Material</button></div><button class="btn sm primary" id="addBtn" type="button">Aggiungi</button></div>
+  </section>
+  <section class="panel">
+    <div class="phead"><h2>Carte</h2><span class="spacer"></span><span class="note"><span class="cost res">2</span> reserve &nbsp;<span class="cost mem">2</span> memory</span></div>
+    <p class="note">Dati dall'Index ufficiale. Clic sul nome per vedere la carta. I ruoli tratteggiati sono suggeriti dal testo della carta; un clic li rende tuoi.</p>
+    <div class="tablewrap"><table><thead><tr><th class="num">Q.</th><th>Costo</th><th>Carta</th><th>Tipo</th><th>Ruoli</th></tr></thead>
+    <tbody id="cardRows">${sec("Material deck",L.material,"material")+sec("Main deck",L.main,"main")+sec("Sideboard",L.side,"side")||`<tr><td colspan="5"><div class="hero-empty">Incolla una lista o aggiungi carte per vederle qui.</div></td></tr>`}</tbody></table></div>
+  </section></div>`},
+
+analisi(){const d=deck(),A=analyze(d),C=consensusDiff(d,A.L),H=A.H;const maxC=Math.max(1,...Object.values(A.curve));
+  const sev={bad:0,warn:1,info:2,good:3};const issues=A.issues.sort((a,b)=>sev[a.lvl]-sev[b.lvl]);const nb=A.rules.filter(r=>!r.ok).length;
+  const li=(arr,f)=>arr.length?`<ul class="issues">${arr.map(f).join("")}</ul>`:`<p class="muted" style="margin:0">Niente da segnalare.</p>`;
+  const champPath=A.champs.length?A.champs.map(c=>`<span class="pill neu">Lv ${c.lvl} · ${esc(champName(c))}${c.mem!=null?` · M${c.mem}`:""}</span>`).join(" "):"—";
+  const pathMem=A.champs.filter(c=>c.lvl>0).reduce((s,c)=>s+(c.mem||0),0);const regMem=A.regalia.map(c=>c.mem||0);
+  return`<div class="stack">
+  <section class="panel"><div class="phead"><h2>Legalità secondo il regolamento</h2><span class="spacer"></span>${nb?`<span class="pill ${A.rules.some(r=>!r.ok&&r.lvl==="bad")?"bad":"warn"}">${nb} da sistemare</span>`:`<span class="pill good">✓ Tutte le regole rispettate</span>`}</div>
+    <div class="rules">${A.rules.map(r=>`<div class="rule ${r.ok?"":r.lvl}"><span class="ico ${r.lvl}">${ICO[r.lvl]}</span><div><b>${esc(r.t)}</b><p>${esc(r.p)}</p></div></div>`).join("")}</div>
+    <p class="src">Regole di costruzione Standard dalle Comprehensive Rules (rules.gatcg.com); legalità delle singole carte dall'Index ufficiale.</p></section>
+  <div class="grid2">
+    <section class="panel"><div class="phead"><h2>Consigli di costruzione</h2></div>${li(issues,issueLi)}</section>
+    <div class="stack">
+      <section class="panel"><div class="phead"><h3>Curva reserve del main</h3><span class="spacer"></span><span class="pill neu">media ${A.avgCost==null?"—":A.avgCost.toFixed(2)}</span></div>
+        <div class="bars">${[0,1,2,3,4,5].map(k=>{const v=A.curve[k]||0;return`<div class="b"><em>${v||""}</em><i style="height:${v/maxC*82}%"></i><span>${k===5?"5+":k}</span></div>`}).join("")}</div>
+        <p class="note">${Object.entries(A.els||{}).map(([e,n])=>`<span class="dot ${e}"></span>${e==="ADV"?"Avanzati":EL_IT[e]} ${n}`).join("&nbsp;&nbsp;&nbsp;")}</p></section>
+      <section class="panel"><h3>Economia di memoria</h3>
+        <div class="stats"><div class="stat"><span class="label">Mano iniziale</span><b>${H}</b><span class="note">dallo Spirit Lv 0</span></div><div class="stat"><span class="label">Reservable</span><b>${A.reservable}</b><span class="note">pagano 1 reserve</span></div><div class="stat"><span class="label">Floating Memory</span><b>${A.floating}</b><span class="note">pagano 1 memory</span></div><div class="stat"><span class="label">Level up</span><b>${pathMem}</b><span class="note">carte banite dalla memoria</span></div></div>
+        <div class="row" style="gap:6px">${champPath}</div>
+        <p class="note">Una carta da reserve N richiede N altre carte dalla mano, che tornano alla Recollection. I costi memory dei material invece bandiscono carte a caso dalla memoria: salire fino al livello massimo te ne costa ${pathMem}, e le regalia costano in media ${regMem.length?(regMem.reduce((a,b)=>a+b,0)/regMem.length).toFixed(1):"0"}.</p></section>
+    </div></div>
+  <section class="panel"><h3>Probabilità di avere almeno una carta del ruolo</h3>
+    <div class="tablewrap"><table><thead><tr><th>Ruolo</th><th class="num">Copie</th><th class="num">Mano (${H})</th><th class="num">T2 play</th><th class="num">T2 draw</th><th class="num">T3 play</th><th class="num">T3 draw</th></tr></thead><tbody>
+    ${ROLES.map(r=>{const n=A.roles[r]||0;const c=k=>{const p=pAtLeast1(A.N,n,k);return`<td class="num" style="color:${n?(p>=.8?"var(--good)":p<.5?"var(--bad)":"var(--fg)"):"var(--faint)"}">${pct(p)}</td>`};return`<tr><td>${r}</td><td class="num">${n}</td>${c(H)}${c(H+1)}${c(H+2)}${c(H+2)}${c(H+3)}</tr>`}).join("")}</tbody></table></div>
+    <p class="note">Chi gioca per primo salta la pescata del turno 1: al turno T vede ${H}+(T−1) carte on the play e ${H}+T on the draw.</p></section>
+  ${!d.arch?`<section class="panel"><div class="hero-empty"><b style="color:var(--fg)">Confronta la lista con il meta</b><span>Imposta l'archetipo nella scheda Lista per confrontarla con ${DATA.snap.decks.toLocaleString("it-IT")} liste pubbliche.</span><button class="btn sm primary" data-go="lista" type="button">Vai alla lista</button></div></section>`:
+  `<section class="panel"><div class="phead"><h2>Confronto con ${esc(d.arch)}</h2><span class="spacer"></span><span class="pill neu">${C.decks} liste · WR ${C.base}%</span></div>
+   <div class="grid-eq">
+    <div class="stack" style="gap:10px"><span class="label">Staple che non giochi · ≥70% delle liste</span>${li(C.missing,x=>`<li class="issue"><span class="ico warn">!</span><div><b>${ci(x.n)}</b><p>in ${Math.round(x.p)}% delle liste · ${x.avg}× medie · WR ${x.wr}%</p></div></li>`)}
+      ${C.lowQty.length?`<span class="label">Staple in meno copie della media</span>${li(C.lowQty,x=>`<li class="issue"><span class="ico info">i</span><div><b>${ci(x.n)}</b><p>tu ${x.q}×, media ${x.avg}×</p></div></li>`)}`:""}</div>
+    <div class="stack" style="gap:10px"><span class="label">Flex che sovraperformano · WR ≥ archetipo +1.5</span>${li(C.flexUp.slice(0,8),x=>`<li class="issue"><span class="ico good">↑</span><div><b>${ci(x.n)}</b><p>WR ${x.wr}% · in ${Math.round(x.p)}% delle liste · ${x.avg}×</p></div></li>`)}</div>
+    <div class="stack" style="gap:10px"><span class="label">Tue scelte insolite · &lt;10% delle liste</span>${li(C.unusual,x=>`<li class="issue"><span class="ico info">i</span><div><b>${x.q}× ${ci(x.n)}</b><p>presente nel ${x.p?Math.round(x.p):0}% delle liste: assicurati che abbia un ruolo preciso.</p></div></li>`)}</div>
+   </div>
+   ${C.sideCommon.length?`<p class="note">Sideboard comune che non hai: ${C.sideCommon.map(x=>`${esc(x.n)} (${Math.round(x.p)}%)`).join(", ")}.</p>`:""}
+   <p class="src">WR per carta = win rate delle liste che la includono (mirror esclusi). È una correlazione: le carte preferite dai giocatori forti risultano gonfiate.</p></section>`}
+  <section class="panel"><div class="phead"><h2 class="row" style="gap:8px"><span style="color:var(--accent);display:inline-flex">${svg("spark",18)}</span>Analisi con Claude</h2><span class="spacer"></span><button class="btn primary" id="aiDeck" type="button">Analizza la lista</button></div>
+    <p class="note">Claude riceve la lista con i testi ufficiali delle carte, un riassunto del regolamento, il confronto con il consenso, il meta e le tue partite. Propone modifiche, sideboard e priorità di test.</p>
+    <div class="ai" id="aiDeckOut" ${d.aiAnalysis?"":"hidden"}>${d.aiAnalysis?md(d.aiAnalysis):""}</div>
+    <div class="row"><input id="aiQ" style="flex:1;min-width:200px" placeholder="Fai una domanda, es. conviene il secondo Frostbind contro Fire Coup Ciel?"><button class="btn" id="aiAsk" type="button">Chiedi</button></div>
+    <div class="ai" id="aiQOut" hidden></div></section>
+  </div>`},
+
+meta(){const t=S.meta.reduce((s,a)=>s+(+a.share||0),0);const d=deck();const maxCh=Math.max(...DATA.champs.map(c=>c.decks));
+  const W=DATA.weekly,Dl=DATA.delta,So=DATA.social;const isTrend=!(Dl&&Dl.movers&&Dl.movers.length);const MV=isTrend?(DATA.snap.trend||[]).map(m=>[m[0],m[1],null,m[3]]):Dl.movers;
+  const weeklyPanel=(W&&W.md)||MV.length?`<section class="panel" style="border-color:var(--accent-line)"><div class="phead"><h2 class="row" style="gap:8px"><span style="color:var(--accent);display:inline-flex">${svg("spark",18)}</span>Meta della settimana</h2><span class="spacer"></span><span class="pill acc">${esc(DATA.snap.date)}</span>${!isTrend&&Dl?.prev_date&&Dl.prev_date!==DATA.snap.date?`<span class="pill neu">rispetto al ${esc(Dl.prev_date)}</span>`:""}</div>
+   ${W&&W.md?`<div class="ai">${md(W.md)}</div>`:""}
+   ${MV.length?`<div class="grid-eq"><div><span class="label">${isTrend?"Tendenza nella stagione · punti di quota":"Variazioni di quota dalla settimana scorsa"}</span><div class="tablewrap"><table><tbody>${MV.slice(0,8).map(m=>`<tr><td><span class="dot ${ARCH_DOT(m[0])}"></span><button type="button" class="cname" data-go-mu="${esc(m[0])}">${esc(m[0])}</button></td><td class="num" style="color:${m[1]>0?"var(--good)":m[1]<0?"var(--bad)":"var(--muted)"}">${m[1]>0?"+":""}${m[1]}</td><td class="num muted">${m[3]}%</td></tr>`).join("")}</tbody></table></div></div>
+    <div class="stack" style="gap:10px">${Dl?.new_archetypes?.length?`<div><span class="label">Nuovi archetipi rilevanti</span><p class="note">${Dl.new_archetypes.map(x=>`${esc(x[0])} (${x[1]}%)`).join(", ")}</p></div>`:""}${Dl?.new_cards?.length?`<div><span class="label">Carte nuove nell'Index · ${Dl.new_cards.length}</span><p class="note">${Dl.new_cards.slice(0,30).map(ci).join(", ")}</p></div>`:""}${Dl?.dropped?.length?`<div><span class="label">Usciti dal meta</span><p class="note">${Dl.dropped.map(esc).join(", ")}</p></div>`:""}</div></div>`:""}
+   <p class="src">Aggiornamento automatico ogni lunedì da grandarchivestats.com, fractalofin.site e api.gatcg.com.</p></section>`:"";
+  const socialPanel=So&&So.slides?.length?`<section class="panel"><div class="phead"><h2>Post Instagram della settimana</h2><span class="spacer"></span><span class="pill neu">${So.slides.length} slide · 1080×1350</span></div>
+   <p class="note">Carosello pronto da pubblicare: meta report${So.featured?` e lista della settimana (${esc(So.featured.arch)} di ${esc(So.featured.player)}, 1° su ${So.featured.size} a ${esc(So.featured.event)})`:""}. Scarica le slide in ordine e caricale come carosello, poi incolla la didascalia.</p>
+   <div class="slides">${So.slides.map((f,i)=>`<figure class="slide"><img src="social/${esc(f)}?v=${esc(So.ver||So.date)}" alt="Slide ${i+1} del post" loading="lazy"><button class="btn sm" data-dl-slide="${esc(f)}" type="button">Scarica slide ${i+1}</button></figure>`).join("")}</div>
+   <div class="stack" style="gap:6px"><label class="label" for="capText">Didascalia</label><textarea id="capText" rows="9" style="font-family:var(--f-body);font-size:13px">${esc(So.caption||"")}</textarea></div>
+   <div class="row"><button class="btn sm primary" id="copyCap" type="button">Copia didascalia</button><button class="btn sm" id="dlAll" type="button">Scarica tutte le slide</button><span class="src">Immagini delle carte © Weebs of the Shore: la didascalia include già i crediti.</span></div>
+   ${DATA.featured_history?.length?`<p class="src">Liste già pubblicate (la lista della settimana cambia sempre archetipo rispetto alle ultime 6): ${DATA.featured_history.slice().reverse().slice(0,8).map(h=>`${esc(h.date)} ${esc(h.arch)}`).join(" · ")}</p>`:""}</section>`:"";
+  const WE=DATA.week_event;const wePanel=WE?`<section class="panel"><div class="phead"><h2>Evento più grande della settimana</h2><span class="spacer"></span><span class="pill neu">${esc(WE.date)} · ${WE.players} giocatori</span></div>
+   <p class="note"><b style="color:var(--fg)">${esc(WE.name)}</b> · <a href="${esc(WE.url)}" target="_blank" rel="noopener">risultati completi ↗</a></p>
+   <div class="grid-eq" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:6px 18px">${WE.top.map(p=>`<div class="row" style="flex-wrap:nowrap;gap:8px"><span class="pill ${p[0]===1?"acc":"neu"}" style="min-width:34px;justify-content:center">${p[0]}°</span><span class="dot ${ARCH_DOT(p[1])}"></span>${META[p[1]]?`<button type="button" class="cname" data-go-mu="${esc(p[1])}" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p[1])}</button>`:`<span>${esc(p[1])}</span>`}<span class="spacer"></span><span class="src">${esc(p[2])}</span></div>`).join("")}</div></section>`:"";
+  return`<div class="stack">${weeklyPanel}${socialPanel}${wePanel}
+  <section class="panel"><div class="phead"><h2>Champion della stagione</h2><span class="pill acc">${esc(DATA.snap.season)}</span><span class="spacer"></span><span class="note">${DATA.champs.length} champion · fonte <a href="https://grandarchivestats.com/champions" target="_blank" rel="noopener">grandarchivestats.com/champions</a></span></div>
+   <p class="note">Ogni champion con le liste tracciate, il win rate complessivo e gli archetipi con cui viene giocato. Alcuni archetipi sono condivisi fra champion (es. Water Mill Nico è pilotato anche da Lorraine, Dante, Tristan e Mordred). Clic su un archetipo per aprire il matchup.</p>
+   <div class="grid-eq" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:12px">${DATA.champs.map(c=>`<div class="panel flat" style="gap:8px;padding:14px">
+     <div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div style="min-width:0"><b style="font:600 15px var(--f-display)">${esc(c.name)}</b><div class="src">${esc(c.cls)}</div></div><div style="text-align:right"><b class="mono" style="color:${wrColor(c.wr/100)}">${c.wr}%</b><div class="src">${c.decks.toLocaleString("it-IT")} liste</div></div></div>
+     <div class="meter" title="Liste rispetto al champion più giocato"><i style="width:${c.decks/maxCh*100}%"></i></div>
+     <div style="display:flex;flex-direction:column;gap:3px">${c.rows.filter(r=>r[2]>=5).slice(0,5).map(r=>`<div class="row" style="flex-wrap:nowrap;gap:6px;font-size:12.5px"><span class="dot ${ARCH_DOT(r[1]||r[0])}"></span>${META[r[1]]?`<button type="button" class="cname" data-go-mu="${esc(r[1])}" style="font-weight:400;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r[0])}</button>`:`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r[0])}</span>`}<span class="spacer"></span><span class="mono muted">${r[2]}</span><span class="mono" style="width:44px;text-align:right;color:${wrColor(r[4]/100)}">${r[4]}%</span></div>`).join("")}</div></div>`).join("")}</div></section>
+  <section class="panel"><div class="phead"><h2>Archetipi</h2><span class="pill neu">${COLS.length} archetipi · ${DATA.meta.reduce((s,m)=>s+m.share,0).toFixed(1)}% del meta</span><span class="spacer"></span><span class="pill ${Math.abs(t-100)<.6?"good":"warn"}">Field atteso ${t.toFixed(1)}%</span><button class="btn sm ghost" id="normMeta" type="button">Normalizza</button><button class="btn sm ghost" id="resetMeta" type="button">Quote reali</button></div>
+   <p class="note">${curWin()==="season"?`Stagione intera: ${DATA.snap.events} eventi, ${DATA.snap.decks.toLocaleString("it-IT")} liste, ${DATA.snap.matches.toLocaleString("it-IT")} match non-mirror (grandarchivestats.com, ${DATA.snap.date}).`:`${WIN_LAB[curWin()]} (dal ${DATA.win[curWin()].start} al ${DATA.win[curWin()].end}): ${DATA.win[curWin()].events} eventi, ${DATA.win[curWin()].players.toLocaleString("it-IT")} giocatori, ${DATA.win[curWin()].matches.toLocaleString("it-IT")} match, calcolati partita per partita dai risultati degli eventi.`} Cambia periodo dal selettore in alto. Modifica “Atteso” per adattare il field al tuo evento: tutti i calcoli lo usano.</p>
+   <input id="metaQ" placeholder="Filtra per archetipo, champion o elemento…" aria-label="Filtra archetipi">
+   <div class="tablewrap" style="max-height:560px;overflow:auto"><table id="metaTable"><thead style="position:sticky;top:0;background:var(--surface);z-index:1"><tr><th>#</th><th>Archetipo</th><th>Champion</th><th>Tier</th><th class="num">Liste</th><th class="num">Quota</th><th class="num">WR</th><th class="num" title="Win rate corretto per Elo, calcolato sulla stagione">WR corr. (stag.)</th><th class="num">Atteso %</th>${d.arch?`<th class="num">Tu vs</th>`:""}</tr></thead><tbody>
+   ${S.meta.map((a,i)=>{const m=META[a.id],ms=mstat(a.id);return`<tr data-arch="${esc(a.id)}" data-q="${esc((a.id+" "+(m?m.ch.filter(x=>x[1]>=5).map(x=>x[0]).join(" "):"")).toLowerCase())}"><td class="num muted">${i+1}</td><td style="white-space:nowrap"><span class="dot ${ARCH_DOT(a.id)}"></span>${m?`<button type="button" class="cname" data-go-mu="${esc(a.id)}">${esc(a.id)}</button>`:esc(archLabel(a.id))}</td><td class="muted" style="font-size:12.5px;white-space:nowrap">${m?esc(m.ch.slice(0,2).map(x=>x[0]).join(", ")):""}</td><td>${m?`<span class="pill ${m.tier==="Tier 1"?"acc":"neu"}">${m.tier}</span>`:""}</td><td class="num">${ms?ms.decks:"—"}</td><td class="num">${ms?ms.share:otherShare()}%</td><td class="num">${ms&&ms.wr!=null?ms.wr+"%":"—"}</td><td class="num">${m?m.adj+"%":"—"}</td><td class="num"><input type="number" step="0.1" min="0" data-share value="${a.share}" aria-label="Quota attesa ${esc(a.id)}"></td>${d.arch?`<td class="num">${a.id===d.arch?'<span class="pill neu">mirror</span>':heat(mxVal(d.arch,a.id))}</td>`:""}</tr>`}).join("")}
+   </tbody></table></div><p class="src">WR corretto = win rate controllato per l'Elo dei piloti (solo stagione). “Tu vs” = win rate head-to-head del tuo archetipo contro quello della riga nel periodo scelto (stagione se nel periodo ci sono meno di 8 match).</p></section>
+  <section class="panel"><div class="phead"><h2>Matrice dei matchup · top 20 · ${WIN_LAB[curWin()].toLowerCase()}</h2><span class="spacer"></span><span class="note">Riga contro colonna · win rate shrunk · sbiadito = meno di 10 match</span></div>
+   ${(()=>{TOPW=[...COLS].sort((a,b)=>(mstat(b)?.share||0)-(mstat(a)?.share||0)).slice(0,20);return""})()}<div class="tablewrap"><table class="mx"><thead><tr><th></th>${TOPW.map((c,j)=>`<th class="num" title="${esc(c)}">${j+1}</th>`).join("")}</tr></thead><tbody>
+   ${TOPW.map((r,i)=>`<tr class="${r===d.arch?"me":""}"><td style="white-space:nowrap;padding-right:10px"><span class="mono muted">${i+1}</span> <span class="dot ${ARCH_DOT(r)}"></span>${esc(r)}</td>${TOPW.map((c,j)=>`<td>${i===j?"":heat(mxVal(r,c))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+   <p class="note">I matchup di tutti i ${COLS.length} archetipi sono nella scheda Matchup.</p></section>
+  ${DATA.major?`<section class="panel"><div class="phead"><h2>Top 8 · ${esc(DATA.major.name)}</h2><span class="spacer"></span><span class="pill neu">${esc(DATA.major.date)} · ${DATA.major.players} giocatori</span></div>
+   <p class="note">Ultimo evento major con liste pubbliche, da <a href="${esc(DATA.major.url)}" target="_blank" rel="noopener">Fractal of Insight</a>.</p>
+   <div class="grid-eq">${DATA.osaka.map((o,i)=>`<details class="panel flat" style="gap:10px"><summary><span class="pill ${o.rank===1?"acc":"neu"}">${o.rank}°</span><span style="color:var(--fg);font-weight:500">${esc(o.deck)}</span><span class="muted">${esc(o.player)} · ${o.record}</span></summary>${deckHTML(o.list)}<div class="row"><button class="btn sm" data-imp-osaka="${i}" type="button">Importa come nuova lista</button></div></details>`).join("")}</div></section>`:""}
+  </div>`},
+
+matchup(){const d=deck();if(!S.sel||!S.meta.find(a=>a.id===S.sel))S.sel=S.meta.find(a=>a.id!==d.arch)?.id;const a=S.meta.find(x=>x.id===S.sel);
+  const m=mu(a.id),e=effWR(d,a),L=parseList(d.text),opp=DATA.cons[a.id],om=META[a.id],t=totShare();
+  const pin=parseQty(m.plan.in),pout=parseQty(m.plan.out),warns=(pin.length||pout.length)?validatePlan(L,m.plan):[];
+  const G=k=>m.games.filter(g=>g.p===k);const wr=x=>x.length?pct((x.filter(g=>g.r==="W").length+.5*x.filter(g=>g.r==="D").length)/x.length):"—";
+  const answers=opp?COLS.map(r=>({r,v:mxVal(r,a.id)})).filter(x=>x.v&&x.v[1]>=20).sort((x,y)=>y.v[0]-x.v[0]):[];const mv=d.arch&&a.id!==d.arch?mxVal(d.arch,a.id):null;
+  const oppPanel=opp?`<section class="panel"><div class="phead"><h3>Cosa gioca ${esc(a.id)}</h3><span class="spacer"></span><span class="pill neu">${om.decks} liste · WR ${om.wr}%</span></div>
+    <div class="grid-eq">
+     <div><span class="label">Main di consenso · ≥50%</span><div class="tablewrap"><table><tbody>${opp.main.filter(r=>r[1]>=50).map(r=>{const k=card(r[0]);return`<tr><td style="width:30px">${k?costBadge(k):""}</td><td><span class="dot ${k?dotKey(k):"ADV"}"></span><button type="button" class="cname" data-ci="${esc(r[0])}">${esc(r[0])}</button></td><td class="num">${r[2]}×</td><td class="num muted">${Math.round(r[1])}%</td></tr>`}).join("")}</tbody></table></div></div>
+     <div class="stack" style="gap:14px"><div><span class="label">Dalla loro sideboard · ≥15%</span><div class="tablewrap"><table><tbody>${opp.side.filter(r=>r[1]>=15).map(r=>`<tr><td><button type="button" class="cname" data-ci="${esc(r[0])}">${esc(r[0])}</button></td><td class="num">${r[2]}×</td><td class="num muted">${Math.round(r[1])}%</td></tr>`).join("")}</tbody></table></div></div>
+      <div><span class="label">Material più comuni</span><p class="note" style="margin-top:4px">${opp.material.filter(r=>r[1]>=40).map(r=>`${esc(r[0])} <span class="mono">${Math.round(r[1])}%</span>`).join(" · ")}</p></div>
+      <div><span class="label">Chi li batte meglio</span><p class="note" style="margin-top:4px">${answers.slice(0,4).map(x=>`${esc(x.r)} <span class="mono">${x.v[0]}%</span>`).join(" · ")||"—"}</p></div></div>
+    </div>
+    <details><summary>Lista vincente: ${esc(opp.best.player)}, ${opp.best.rank}° su ${opp.best.size} · ${esc(opp.best.event)} · ${opp.best.date}</summary><div style="margin-top:10px">${deckHTML(opp.best.list)}</div><div class="row" style="margin-top:8px"><button class="btn sm" id="impBest" type="button">Importa come nuova lista</button><a class="src" href="https://grandarchivestats.com${esc(opp.best.url)}" target="_blank" rel="noopener">Apri su grandarchivestats ↗</a></div></details>
+  </section>`:`<section class="panel"><div class="hero-empty">Per “Altro” non ci sono liste aggregate: usa la stima manuale e le tue partite.</div></section>`;
+  return`<div class="grid-mu">
+  <aside class="panel" style="gap:10px"><span class="label">Avversari per quota attesa · ${S.meta.length}</span><input id="muQ" placeholder="Cerca archetipo o champion…" aria-label="Cerca avversario" value="${esc(S.muQ||"")}">
+   ${d.arch?"":`<div class="callout">${svg("spark",16)}<div>Imposta l'archetipo della lista per usare i win rate reali.</div></div>`}
+   <div class="archlist">${[...S.meta].sort((x,y)=>(x.id==="altro")-(y.id==="altro")||y.share-x.share).map(x=>{const ex=effWR(d,x),ok=!!d.matchups[x.id]?.plan?.in,grey=ex.src==="ignoto"||ex.src==="mirror";return`<button type="button" data-sel="${esc(x.id)}" aria-current="${x.id===a.id}" data-q="${esc((x.id+" "+(META[x.id]?.ch||[]).filter(c=>c[1]>=5).map(c=>c[0]).join(" ")).toLowerCase())}"><div class="t"><span class="n"><span class="dot ${ARCH_DOT(x.id)}"></span>${esc(archLabel(x.id))}</span><span class="mono" style="font-size:12px;color:${grey?"var(--faint)":wrColor(ex.wr)}">${ex.src==="mirror"?"mirror":ex.src==="ignoto"?"?":pct(ex.wr)}</span></div><div class="wrbar"><i style="width:${ex.wr*100}%;background:${grey?"var(--line-strong)":wrColor(ex.wr)}"></i></div><small>${pct1((+x.share||0)/t)} del field${ok?" · piano pronto ✓":""}</small></button>`}).join("")}</div>
+  </aside>
+  <div class="stack">
+   <section class="panel">
+    <div class="phead"><h2 class="row" style="gap:0"><span class="dot ${ARCH_DOT(a.id)}"></span>${esc(archLabel(a.id))}</h2><span class="spacer"></span>${om?`<span class="pill ${om.tier==="Tier 1"?"acc":"neu"}">${om.tier}</span>`:""}<span class="pill neu">${pct1((+a.share||0)/t)} del field atteso</span></div>
+    ${om?`<p class="note" style="margin-top:-6px">Pilotato da ${om.ch.slice(0,4).map(x=>`<b style="color:var(--fg)">${esc(x[0])}</b> (${x[1]})`).join(", ")} · ${WIN_LAB[curWin()].toLowerCase()}: ${mstat(a.id)?.decks??0} liste, WR ${mstat(a.id)?.wr??"—"}% · stagione corretto per Elo ${om.adj}%</p>`:""}
+    <div class="stats">
+     <div class="stat"><span class="label">Win rate usato</span><b style="color:${e.src==="ignoto"?"var(--fg)":wrColor(e.wr)}">${e.src==="ignoto"?"—":pct(e.wr)}</b><span class="note">${esc(e.src)}</span></div>
+     <div class="stat"><span class="label">Dal meta</span><b>${mv?mv[0]+"%":"—"}</b><span class="note">${mv?`${mv[4]}-${mv[5]}-${mv[6]} su ${mv[1]} match · ${mv[7]==="season"?"stagione":WIN_LAB[mv[7]].toLowerCase()}${mv[3]!=null?` · Elo-corretto ${mv[3]}%`:""}`:d.arch?"nessun head-to-head registrato":"archetipo non impostato"}</span></div>
+     <div class="stat"><span class="label">Tue partite</span><b>${m.games.length}</b><span class="note">${m.games.filter(g=>g.r==="W").length}V · ${m.games.filter(g=>g.r==="L").length}S · ${m.games.filter(g=>g.r==="D").length}P</span></div>
+     <div class="stat"><span class="label">Play / draw</span><b style="font-size:18px">${wr(G("play"))} / ${wr(G("draw"))}</b><span class="note">${G("play").length} / ${G("draw").length} partite</span></div>
+    </div>
+    <div class="row"><span class="label" style="margin-right:4px">Registra</span>${[["W","play","Vinta · play"],["W","draw","Vinta · draw"],["L","play","Persa · play"],["L","draw","Persa · draw"],["D","play","Pareggio"]].map(([r,p,l])=>`<button class="btn sm" data-g="${r}|${p}" type="button">${l}</button>`).join("")}</div>
+    ${m.games.length?`<div class="games">${m.games.map((g,i)=>`<button class="g ${g.r}" data-rm="${i}" type="button" title="${g.r==="W"?"Vinta":g.r==="L"?"Persa":"Pareggio"} on the ${g.p}. Clic per rimuovere">${g.r==="W"?"V":g.r==="L"?"S":"P"}</button>`).join("")}</div>`:""}
+    <div class="row"><label class="label" for="manualWR">Stima manuale %</label><input type="number" id="manualWR" min="0" max="100" value="${m.manual??""}" placeholder="—"><span class="note">Sostituisce tutto il resto. Senza, il win rate parte dal meta (pesato come fino a 30 partite) e si sposta con le tue.</span></div>
+   </section>
+   ${oppPanel}
+   <section class="panel"><div class="phead"><h3>Piano di sideboard</h3><span class="spacer"></span><button class="btn primary" id="aiPlan" type="button">${svg("spark",16)} Proponi con Claude</button></div>
+    <div class="grid-eq">
+     <div class="stack" style="gap:6px"><label class="label" for="pIn">Entrano · dalla sideboard</label><textarea id="pIn" rows="5" placeholder="2 Nome carta">${esc(m.plan.in)}</textarea></div>
+     <div class="stack" style="gap:6px"><label class="label" for="pOut">Escono · dal main o dal material</label><textarea id="pOut" rows="5" placeholder="2 Nome carta">${esc(m.plan.out)}</textarea></div>
+    </div>
+    ${warns.length?`<ul class="issues">${warns.map(w=>`<li class="issue"><span class="ico bad">✕</span><div>${esc(w)}</div></li>`).join("")}</ul>`:(pin.length?`<div><span class="pill good">✓ Piano legale: ${sum(pin)} dentro, ${sum(pout)} fuori</span></div>`:"")}
+    
+    <div class="stack" style="gap:6px"><label class="label" for="pNotes">Note di gioco</label><textarea id="pNotes" rows="4" placeholder="Carte chiave dell'avversario, cosa rispettare, quando correre">${esc(m.plan.notes)}</textarea></div>
+    <div class="ai" id="aiPlanOut" hidden></div>
+   </section>
+  </div></div>`},
+
+report(){const d=deck(),A=analyze(d),t=totShare();
+  const rows=S.meta.map(a=>{const e=effWR(d,a),m=d.matchups[a.id];const w=(+a.share||0)/t;return{a,e,w,risk:w*(1-e.wr),plan:!!(m&&(m.plan.in||m.plan.out)),notes:!!(m&&m.plan.notes)}}).sort((x,y)=>y.risk-x.risk);
+  const exp=expected(d),R=S.settings.rounds,tc=topCut(exp,R);
+  const sideUse=A.L.side.map(c=>{let cov=0,arch=[];S.meta.forEach(a=>{if(parseQty(d.matchups[a.id]?.plan?.in).some(x=>x.name.toLowerCase()===c.name.toLowerCase())){cov+=(+a.share||0)/t;arch.push(archLabel(a.id))}});return{c,cov,arch}}).sort((a,b)=>b.cov-a.cov);
+  const rel=rows.filter(r=>r.a.id!==d.arch&&r.a.id!=="altro");const covered=rel.filter(r=>r.plan).reduce((s,r)=>s+r.w,0)/(rel.reduce((s,r)=>s+r.w,0)||1);
+  const nb=A.rules.filter(r=>!r.ok&&r.lvl==="bad").length;const maxRisk=Math.max(...rows.map(x=>x.risk),.0001);
+  const dist=[...Array(R+1)].map((_,k)=>binom(R,R-k,exp));const maxD=Math.max(...dist);
+  const checks=[[!nb,"Lista legale secondo il regolamento"],[!!d.arch,"Archetipo impostato per usare i dati reali"],[covered>=.6,"Piano di sideboard per almeno il 60% del field"],[rel.slice(0,3).every(r=>r.notes),"Note di gioco per i 3 matchup più rischiosi"],[rel.slice(0,5).every(r=>r.e.n>=3),"Almeno 3 partite di test contro i 5 matchup più rischiosi"]];
+  return`<div class="stack">
+  <div class="stats">
+   <div class="stat"><span class="label">Win rate atteso</span><b>${pct1(exp)}</b><span class="note">pesato sul field atteso</span></div>
+   <div class="stat"><span class="label">X-1 o meglio</span><b>${pct(tc.x1)}</b><span class="note">su ${R} round</span></div>
+   <div class="stat"><span class="label">X-2 o meglio</span><b>${pct(tc.x2)}</b><span class="note">soglia tipica di top cut</span></div>
+   <div class="stat"><span class="label">Field con piano</span><b>${pct(covered)}</b><span class="note">esclusi mirror e “Altro”</span></div>
+   <div class="stat"><span class="label">Preparazione</span><b>${checks.filter(c=>c[0]).length}/${checks.length}</b><span class="note">checklist completata</span></div>
+  </div>
+  <div class="grid2">
+   <section class="panel"><div class="phead"><h3>Checklist pre-evento</h3><span class="spacer"></span><button class="btn sm" id="copyReport" type="button">Copia report</button></div><ul class="issues">${checks.map(([ok,tx])=>`<li class="issue"><span class="ico ${ok?"good":"warn"}">${ok?"✓":"!"}</span><div><b style="font-weight:500">${tx}</b></div></li>`).join("")}</ul></section>
+   <section class="panel"><h3>Distribuzione dei record su ${R} round</h3>
+    <div class="bars" style="height:150px">${dist.map((p,k)=>`<div class="b"><em>${pct(p)}</em><i style="height:${p/maxD*80}%;background:${k<=2?"linear-gradient(180deg,var(--accent),color-mix(in srgb,var(--accent) 55%,var(--surface)))":"var(--line-strong)"}"></i><span>${R-k}-${k}</span></div>`).join("")}</div>
+    <p class="note">Stima binomiale con il win rate atteso; i pareggi non sono modellati. In viola i record da X-2 in su.</p></section>
+  </div>
+  <section class="panel"><h3>Matchup ordinati per rischio</h3>
+   <p class="note">Rischio = quota del field × probabilità di perdere. In cima trovi dove un punto di win rate vale di più: concentra lì playtest e slot di sideboard.</p>
+   <div class="tablewrap"><table><thead><tr><th>Archetipo</th><th class="num">Field</th><th class="num">Win rate</th><th>Fonte</th><th>Rischio</th><th>Side</th><th>Note</th></tr></thead><tbody>
+   ${rows.map((r,ri)=>`<tr ${ri>=15?'class="tail" hidden':""}><td style="white-space:nowrap"><span class="dot ${ARCH_DOT(r.a.id)}"></span><button type="button" class="cname" data-go-mu="${esc(r.a.id)}">${esc(archLabel(r.a.id))}</button></td><td class="num">${pct1(r.w)}</td><td class="num" style="color:${r.e.src==="ignoto"?"var(--faint)":wrColor(r.e.wr)}">${r.e.src==="ignoto"?"—":pct(r.e.wr)}</td><td class="src" style="white-space:nowrap">${esc(r.e.src)}</td>
+     <td><div class="meter" style="width:110px"><i style="width:${r.risk/maxRisk*100}%"></i></div></td>
+     <td>${r.a.id===d.arch||r.a.id==="altro"?'<span class="pill neu">—</span>':r.plan?'<span class="pill good">pronto</span>':(r.w>=.04?'<span class="pill bad">manca</span>':'<span class="pill neu">—</span>')}</td><td>${r.notes?'<span class="pill good">sì</span>':'<span class="pill neu">—</span>'}</td></tr>`).join("")}
+   </tbody></table></div>${rows.length>15?`<button class="btn sm ghost" id="showTail" type="button">Mostra tutti i ${rows.length} archetipi</button>`:""}</section>
+  <section class="panel"><h3>Rendimento degli slot di sideboard</h3>
+   ${sideUse.length?`<div class="tablewrap"><table><thead><tr><th class="num">Q.</th><th>Carta</th><th>Copertura field</th><th>Entra contro</th></tr></thead><tbody>${sideUse.map(s=>`<tr><td class="num">${s.c.qty}</td><td>${ci(s.c.name)}</td><td><div class="row" style="flex-wrap:nowrap"><div class="meter" style="width:90px"><i style="width:${s.cov*100}%"></i></div><span class="mono">${pct(s.cov)}</span></div></td><td>${s.arch.length?esc(s.arch.join(", ")):'<span class="pill warn">nessun piano</span>'}</td></tr>`).join("")}</tbody></table></div>`:`<div class="hero-empty">Nessuna sideboard nella lista.</div>`}</section>
+  </div>`},
+
+regole(){const st=S.settings;
+  const RS=[["Main deck","Almeno 60 carte, massimo 4 copie per nome."],["Material deck","Massimo 12 carte, una sola copia per nome, almeno un champion Lv 0. Solo champion e regalia; una sola Divine Relic."],["Sideboard","Massimo 15 carte e 15 punti: le carte da main valgono 1, regalia e champion 3."],["Inizio partita","Lo Spirit Lv 0 entra in campo e il suo On Enter dà la mano (di solito 7). Chi inizia salta la pescata del turno 1; al primo turno niente materialize e attacca solo il secondo giocatore."],["Ordine del turno","Wake Up → Materialize → Recollection → Draw → Main → End."],["Costi reserve","Costo N: metti N altre carte dalla mano nella memoria; tornano in mano alla Recollection. Reservable: l'oggetto si riposa e paga 1."],["Costi memory","Per materializzare dal material: banisci N carte casuali dalla memoria. Floating Memory: banisci quella carta dal cimitero per pagarne 1."],["Level up","Solo da Lv N a N+1. Il keyword Lineage richiede un champion precedente con lo stesso nome. Gli Inherited Effect restano finché la carta è nella lineage."],["Elementi","Norm sempre disponibile. Fuoco, Acqua, Vento e gli avanzati si sbloccano con i champion della lineage; Exalted richiede un champion di elemento avanzato."],["Restrizioni","Class Locked e Level Locked impediscono di giocare la carta; Class, Element e Champion Bonus si attivano solo se il champion corrisponde."],["Velocità","Slow: solo nel tuo main phase a stack vuoto (allies e attack). Fast: ogni volta che hai Opportunity."],["Fine partita","Perdi se il tuo champion muore, se non controlli un champion o se peschi da un mazzo vuoto."]];
+  return`<div class="stack">
+  <section class="panel"><div class="phead"><h2>Regolamento per il deckbuilding</h2><span class="spacer"></span><a class="btn sm" href="https://rules.gatcg.com/general-rules/general-rules-format-conventions" target="_blank" rel="noopener">Comprehensive Rules ↗</a></div>
+   <p class="note">Le regole che l'app verifica sulla tua lista e passa a Claude nelle analisi. Per i tornei valgono anche le <a href="https://trg.gatcg.com" target="_blank" rel="noopener">Tournament Rules</a>.</p>
+   <div class="rules">${RS.map(([tt,p])=>`<div class="rule"><span class="ico info">${svg("regole",13)}</span><div><b>${tt}</b><p>${p}</p></div></div>`).join("")}</div></section>
+  <div class="grid-eq">
+  <section class="panel"><h3>Parametri</h3>
+   <div class="stack" style="gap:10px">
+    <label class="row" style="justify-content:space-between"><span>Round svizzeri del tuo evento</span><input type="number" data-set="rounds" value="${st.rounds}" min="1" max="15"></label>
+    <label class="row" style="justify-content:space-between"><span>Mano iniziale se lo Spirit non la indica</span><input type="number" data-set="hand" value="${st.hand}" min="1" max="12"></label>
+   </div>
+   <h3 style="margin-top:6px">Obiettivi di densità per ruolo</h3><p class="note">Sotto questi numeri l'analisi avvisa. 0 = nessun controllo.</p>
+   <div class="stack" style="gap:8px">${ROLES.map(r=>`<label class="row" style="justify-content:space-between"><span>${r}</span><input type="number" data-target="${r}" value="${st.targets?.[r]??0}" min="0"></label>`).join("")}</div></section>
+  <section class="panel"><h3>Backup</h3>
+   <p class="note">Liste, partite e piani restano in questo browser. Esporta un backup prima di cambiare dispositivo.</p>
+   <div class="row"><button class="btn" id="exp" type="button">Copia backup</button><button class="btn" id="dl" type="button">Salva file</button><label class="btn" for="impFile">Importa file…</label><input type="file" id="impFile" accept=".json,application/json" hidden></div>
+   <textarea id="impText" rows="4" placeholder="…oppure incolla qui un backup"></textarea>
+   <div class="row"><button class="btn" id="imp" type="button">Importa testo</button></div>
+   <h3 style="margin-top:6px">Fonti</h3><p class="note">Meta, champion, head-to-head di 62 archetipi, consenso e liste vincenti: grandarchivestats.com (${DATA.snap.date}). Top 8 dell'ultimo major: fractalofin.site. Carte, costi e legalità: api.gatcg.com (${DATA.cards.length} carte). Regole: rules.gatcg.com. Per aggiornare i dati chiedi a Claude di rigenerare la pagina.</p></section>
+  </div></div>`}};
+
+/* ---------- binding ---------- */
+function newDeckFrom(name,text,arch){const d=freshDeck(name,text,arch);S.decks[d.id]=d;S.current=d.id;S.tab="lista";save();render();window.scrollTo({top:0});toast("Lista importata")}
+function archOfTitle(t){t=t.toLowerCase();let best="",bs=0;for(const n of COLS){const w=n.toLowerCase().split(" ");const s=w.filter(x=>t.includes(x)).length/w.length;if(s>bs){bs=s;best=n}}return bs>=.6?best:""}
+const BIND={
+ lista(){const d=deck();let sec="main";
+  $("#deckName").oninput=e=>{d.name=e.target.value||"Senza nome";d.updated=Date.now();save();renderShell()};
+  $("#deckArch").onchange=e=>{d.arch=e.target.value;save();render();toast("Archetipo impostato")};
+  document.querySelectorAll(".useDet").forEach(b=>b.onclick=e=>{d.arch=e.currentTarget.dataset.n;save();render();toast("Archetipo impostato")});
+  let t;$("#deckText").oninput=e=>{d.text=e.target.value;d.example=false;d.updated=Date.now();save();clearTimeout(t);t=setTimeout(()=>{const ta=$("#deckText");const pos=ta.selectionStart,sc=ta.scrollTop;render();const n=$("#deckText");n.focus();n.setSelectionRange(pos,pos);n.scrollTop=sc},800)};
+  $("#addSec").onclick=e=>{const b=e.target.closest("[data-v]");if(!b)return;sec=b.dataset.v;$("#addSec").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b))};
+  $("#addBtn").onclick=()=>{const raw=$("#addName").value.trim();if(!raw)return;const k=card(raw);const name=k?k.name:raw;const q=Math.max(1,+$("#addQty").value||1);
+    const s=k&&isMaterialType(k)&&sec==="main"?"material":sec;const hdr={material:"# Material Deck",main:"# Main Deck",side:"# Sideboard"}[s];
+    const lines=d.text.split(/\r?\n/);let idx=lines.findIndex(l=>{const x=l.trim().toLowerCase();return x.startsWith("#")&&(s==="side"?x.includes("side"):x.includes(s))});
+    if(idx<0){lines.push("",hdr);idx=lines.length-1}let j=idx+1;while(j<lines.length&&!/^#/.test(lines[j].trim()))j++;while(j>idx+1&&!lines[j-1].trim())j--;lines.splice(j,0,`${q} ${name}`);
+    d.text=lines.join("\n");d.example=false;d.updated=Date.now();save();render();toast(k?`Aggiunta ${name}${s!==sec?" nel material deck":""}`:`Aggiunta “${name}”, non trovata nell'Index`)};
+  $("#addName").onkeydown=e=>{if(e.key==="Enter")$("#addBtn").click()};
+  $("#cardRows").addEventListener("click",e=>{const b=e.target.closest("[data-role]");if(!b)return;const n=fromAttr(b.closest("tr").dataset.card);const cur=rolesOf(d,n).roles;const r=b.dataset.role;
+    d.cards[n]=Object.assign(d.cards[n]||{},{roles:cur.includes(r)?cur.filter(x=>x!==r):[...cur,r]});save();b.closest(".chips").querySelectorAll(".chip").forEach(c=>{c.classList.remove("auto");c.classList.toggle("on",d.cards[n].roles.includes(c.dataset.role))})})},
+ analisi(){const d=deck();
+  $("#aiDeck").onclick=async()=>{const A=analyze(d),C=consensusDiff(d,A.L);
+   const cmp=C?`\n\nCONFRONTO CON ${d.arch} (WR medio archetipo ${C.base}%):\nStaple mancanti: ${C.missing.map(x=>`${x.n} (${Math.round(x.p)}%, WR ${x.wr}%)`).join("; ")||"nessuna"}\nFlex sovraperformanti non giocate: ${C.flexUp.slice(0,6).map(x=>`${x.n} (${Math.round(x.p)}%, WR ${x.wr}%)`).join("; ")||"nessuna"}\nScelte insolite: ${C.unusual.map(x=>`${x.q} ${x.n}`).join("; ")||"nessuna"}`:"";
+   const txt=await runAI($("#aiDeck"),$("#aiDeckOut"),`${PREAMBLE}\n\nAnalizza questa lista in vista di un Regional.\n\n${deckContext(d)}${cmp}\n\nCARTE CHIAVE DEI 6 AVVERSARI PIÙ GIOCATI (testi ufficiali):\n${oppKeyCards(d)}\n\nAvvisi automatici:\n${A.issues.map(i=>"- "+i.t+": "+i.p).join("\n")}\n\nStruttura la risposta con questi titoli markdown (###): Legalità (solo se ci sono problemi) · Identità e piano di gioco · Punti di forza · Problemi principali (considera anche economia di reserve/memory e percorso di level up) · Modifiche consigliate (righe “−N Carta / +N Carta — motivo”, massimo 6, ordinate per impatto, solo carte citate qui o che conosci con certezza; la lista finale deve restare legale) · Sideboard per il meta (cosa entra/esce contro i 4 archetipi con più quota, rispettando 15 carte/15 punti) · Cosa testare prima dell'evento (3–5 punti). Sii specifico e sintetico.`);
+   if(txt){d.aiAnalysis=txt;save()}};
+  $("#aiAsk").onclick=()=>{const q=$("#aiQ").value.trim();if(!q)return;runAI($("#aiAsk"),$("#aiQOut"),`${PREAMBLE}\n\n${deckContext(d)}\n\nDomanda del giocatore: ${q}\n\nRispondi in modo mirato, massimo 250 parole. Se la domanda riguarda una regola, cita la regola pertinente.`)};
+  $("#aiQ").onkeydown=e=>{if(e.key==="Enter")$("#aiAsk").click()}},
+ meta(){const v=$("#view");
+  const dlSlide=async f=>{try{const dl=await window.claude?.use?.("downloads");if(!dl)throw{code:"na"};const blob=await (await fetch(`social/${f}?v=${DATA.social.ver||DATA.social.date}`)).blob();await dl.save({filename:`meta-report-${DATA.social.date}-${f}`,data:blob});return true}catch(e){if(e?.code==="na")toast("Download non disponibile qui: tieni premuto sull'immagine per salvarla");else if(e?.code!=="cancelled"&&e?.code!=="declined")toast("Download non riuscito: riprova");return false}};
+  v.addEventListener("click",async e=>{const b=e.target.closest("[data-dl-slide]");if(b){if(await dlSlide(b.dataset.dlSlide))toast("Slide salvata")}});
+  $("#dlAll")&&($("#dlAll").onclick=async()=>{for(const f of DATA.social.slides){if(!await dlSlide(f))break}});
+  $("#copyCap")&&($("#copyCap").onclick=async()=>{const ta=$("#capText");try{await navigator.clipboard.writeText(ta.value);toast("Didascalia copiata")}catch(_){ta.select();toast("Seleziona e copia il testo")}});
+  v.addEventListener("change",e=>{if(e.target.matches("[data-share]")){const a=S.meta.find(x=>x.id===e.target.closest("tr").dataset.arch);a.share=Math.max(0,+e.target.value||0);save();render()}});
+  $("#metaQ").oninput=e=>{const q=e.target.value.trim().toLowerCase();v.querySelectorAll("#metaTable tbody tr").forEach(r=>{const el={fuoco:"fire",acqua:"water",vento:"wind"};const qq=el[q]||q;r.hidden=!!qq&&!r.dataset.q.includes(qq)})};
+  v.addEventListener("click",e=>{const b=e.target.closest("[data-imp-osaka]");if(b){const o=DATA.osaka[+b.dataset.impOsaka];newDeckFrom(`${o.deck} · ${o.player} (${o.rank}° ${DATA.major?.name||"major"})`,o.list,archOfTitle(o.deck))}});
+  $("#normMeta").onclick=()=>{const t=S.meta.reduce((s,a)=>s+(+a.share||0),0);if(!t)return;S.meta.forEach(a=>a.share=Math.round((+a.share||0)/t*1000)/10);save();render();toast("Quote normalizzate a 100%")};
+  const rb=$("#resetMeta");rb.onclick=()=>{if(rb.dataset.c){S.meta=defaultMeta();save();render();toast("Quote reali ripristinate")}else{rb.dataset.c=1;rb.textContent="Conferma: sovrascrive";setTimeout(()=>{if(rb.isConnected){rb.dataset.c="";rb.textContent="Quote reali"}},4000)}}},
+ matchup(){const d=deck(),a=S.meta.find(x=>x.id===S.sel);if(!a)return;const m=mu(a.id);const v=$("#view");
+  const fq=()=>{const q=(S.muQ||"").trim().toLowerCase();v.querySelectorAll(".archlist [data-sel]").forEach(b=>b.hidden=!!q&&!b.dataset.q.includes(q))};fq();
+  $("#muQ").oninput=e=>{S.muQ=e.target.value;fq()};
+  v.addEventListener("click",e=>{const s=e.target.closest("[data-sel]");if(s){S.sel=s.dataset.sel;save();render();return}
+   const g=e.target.closest("[data-g]");if(g){const [r,p]=g.dataset.g.split("|");m.games.push({r,p,t:Date.now()});d.updated=Date.now();save();render();toast(r==="W"?"Vittoria registrata":r==="L"?"Sconfitta registrata":"Pareggio registrato");return}
+   const rm=e.target.closest("[data-rm]");if(rm){m.games.splice(+rm.dataset.rm,1);save();render();return}
+});
+  $("#impBest")&&($("#impBest").onclick=()=>{const b=DATA.cons[a.id].best;newDeckFrom(`${a.id} · ${b.player}`,b.list,a.id)});
+  $("#manualWR").onchange=e=>{m.manual=e.target.value===""?null:Math.max(0,Math.min(100,+e.target.value));save();render()};
+  const bindTA=(id,k)=>{let t;$(id).oninput=e=>{m.plan[k]=e.target.value;save();if(k==="in"||k==="out"){clearTimeout(t);t=setTimeout(()=>{const f=document.activeElement?.id,pos=document.activeElement?.selectionStart;render();if(f){const el=document.getElementById(f);el?.focus();try{el.setSelectionRange(pos,pos)}catch(_){}}},900)}}};
+  bindTA("#pIn","in");bindTA("#pOut","out");bindTA("#pNotes","notes");
+  $("#aiPlan").onclick=async()=>{const out=$("#aiPlanOut");const mv=d.arch?mxVal(d.arch,a.id):null;
+   const res=await runAI($("#aiPlan"),out,`${PREAMBLE}\n\n${deckContext(d)}\n\n${consText(a.id)}\n\nDATI DEL MATCHUP: ${mv?`${d.arch} vince il ${mv[0]}% contro ${a.id} su ${mv[1]} match.`:"nessun dato aggregato."} Partite del giocatore: ${m.games.map(g=>g.r+"/"+g.p).join(", ")||"nessuna"}. Note del giocatore: ${m.plan.notes||"nessuna"}.\n\nPrepara il piano per il matchup contro ${archLabel(a.id)}. "in" = SOLO carte della SIDEBOARD del giocatore; "out" = carte del suo MAIN o MATERIAL DECK. Dopo lo scambio il mazzo deve restare legale: main ≥60 con max 4 copie, material ≤12 carte uniche (una regalia che entra va nel material e di solito sostituisce una regalia). Il totale di "in" deve essere uguale a quello di "out" (0 se non serve cambiare nulla). Considera cosa l'avversario porta dalla sua sideboard e la differenza tra on the play e on the draw.\nRispondi solo con un oggetto JSON: {"sintesi": string (2-3 frasi), "chiavi": [string] (3-5 carte o momenti dell'avversario da rispettare), "in": [{"name": string, "qty": number}], "out": [{"name": string, "qty": number}], "note": string}`,{json:true});
+   if(!res||typeof res!=="object")return;
+   const lines=arr=>(Array.isArray(arr)?arr:[]).filter(x=>x&&x.name).map(x=>`${Math.max(1,parseInt(x.qty)||1)} ${x.name}`).join("\n");
+   const pIn=lines(res.in),pOut=lines(res.out),keys=(Array.isArray(res.chiavi)?res.chiavi:[]).map(String);const chk=validatePlan(parseList(d.text),{in:pIn,out:pOut});
+   out.innerHTML=`<h4>Sintesi</h4><p>${esc(res.sintesi)}</p>${keys.length?`<h4>Da rispettare</h4><ul>${keys.map(k=>`<li>${esc(k)}</li>`).join("")}</ul>`:""}<h4>Sideboard proposta</h4><div class="grid-eq"><div><span class="label">Entrano</span><pre>${esc(pIn||"—")}</pre></div><div><span class="label">Escono</span><pre>${esc(pOut||"—")}</pre></div></div>${chk.length?`<p><span class="pill bad">Da correggere</span> ${esc(chk.join("; "))}</p>`:`<p><span class="pill good">✓ Piano legale</span></p>`}${res.note?`<p>${esc(res.note)}</p>`:""}<div class="row"><button class="btn primary" id="applyPlan" type="button">Applica al piano</button><span class="note">Sostituisce entrano/escono; aggiunge sintesi e chiavi alle note.</span></div>`;
+   $("#applyPlan").onclick=()=>{m.plan.in=pIn;m.plan.out=pOut;const add=[res.sintesi,keys.length?"Da rispettare: "+keys.join("; "):"",res.note].filter(Boolean).join("\n");m.plan.notes=(m.plan.notes?m.plan.notes+"\n\n":"")+add;save();render();toast("Piano applicato")}}},
+ report(){const d=deck();$("#showTail")&&($("#showTail").onclick=e=>{document.querySelectorAll("tr.tail").forEach(r=>r.hidden=false);e.currentTarget.remove()});$("#copyReport").onclick=async e=>{const t=totShare(),L=parseList(d.text);
+   const txt=`${d.name}${d.arch?" ("+d.arch+")":""}\nWin rate atteso: ${pct1(expected(d))}\n\n# Material Deck\n${L.material.map(c=>`${c.qty} ${c.name}`).join("\n")}\n\n# Main Deck\n${L.main.map(c=>`${c.qty} ${c.name}`).join("\n")}\n\n# Sideboard\n${L.side.map(c=>`${c.qty} ${c.name}`).join("\n")}\n\nMATCHUP\n`+S.meta.map(a=>{const ef=effWR(d,a),m=d.matchups[a.id];return`${archLabel(a.id)} ${pct1((+a.share||0)/t)} · WR ${ef.src==="ignoto"?"?":pct(ef.wr)}${m?.plan?.in?`\n  IN: ${m.plan.in.replace(/\n/g,", ")}\n  OUT: ${m.plan.out.replace(/\n/g,", ")}`:""}${m?.plan?.notes?`\n  Note: ${m.plan.notes.replace(/\n+/g," / ")}`:""}`}).join("\n");
+   try{await navigator.clipboard.writeText(txt);toast("Report copiato")}catch(_){const ta=document.createElement("textarea");ta.value=txt;ta.rows=10;e.target.closest(".panel").append(ta);ta.select();toast("Seleziona e copia il testo")}}},
+ regole(){const v=$("#view");
+  v.addEventListener("change",e=>{const k=e.target.dataset.set,r=e.target.dataset.target;if(k){S.settings[k]=Math.max(1,+e.target.value||1);save();renderShell()}if(r){S.settings.targets[r]=Math.max(0,+e.target.value||0);save()}});
+  const dump=()=>JSON.stringify({app:"archive-deck-lab",v:2,data:S});
+  $("#exp").onclick=async()=>{try{await navigator.clipboard.writeText(dump());toast("Backup copiato")}catch(_){$("#impText").value=dump();$("#impText").select();toast("Seleziona e copia il testo")}};
+  $("#dl").onclick=async()=>{try{const dl=await window.claude?.use?.("downloads");if(!dl)throw 0;await dl.save({filename:"archive-deck-lab-backup.json",data:dump()});toast("Backup salvato")}catch(_){$("#impText").value=dump();toast("Salvataggio non disponibile: copia il testo qui sotto")}};
+  const imp=txt=>{try{const o=JSON.parse(txt);const data=o.data||o;if(!data.decks)throw 0;S=data;fix();save();render();toast("Backup importato")}catch(_){toast("Testo non valido: serve un backup esportato da questa app")}};
+  $("#imp").onclick=()=>imp($("#impText").value);
+  $("#impFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>imp(r.result);r.readAsText(f)}}};
+
+/* ---------- eventi globali ---------- */
+document.addEventListener("click",e=>{
+  if(e.target.id==="cardModal"||e.target.closest("#cmClose")){closeCard();return}
+  if(e.target.closest("#cmPrev")){stepCard(-1);return}if(e.target.closest("#cmNext")){stepCard(1);return}
+  const cc=e.target.closest("[data-ci]");if(cc){const scope=cc.closest("tbody,.decklist,.issues,.archlist")||document.body;const list=[...new Set([...scope.querySelectorAll("[data-ci]")].map(x=>x.dataset.ci))];openCard(cc.dataset.ci,list);return}
+  const fa=e.target.closest("[data-fold-all]");if(fa){const c=fa.dataset.foldAll==="1";S.folds=S.folds||{};document.querySelectorAll("#view .fold-head").forEach(h=>{const p=h.parentElement;p.classList.toggle("collapsed",c);h.setAttribute("aria-expanded",String(!c));S.folds[foldKey(p)]=c});save();return}
+  if(e.target.closest("#stripToggle")){S.stripMini=!(S.stripMini!==false);save();renderShell();return}
+  const wb=e.target.closest("[data-win]");if(wb){S.win=wb.dataset.win;S.meta=defaultMeta();save();render();toast(`Periodo: ${WIN_LAB[S.win]} · field atteso aggiornato`);return}
+  const tab=e.target.closest("[data-tab]");if(tab){go(tab.dataset.tab);return}
+  const g=e.target.closest("[data-go]");if(g){go(g.dataset.go);return}
+  const gm=e.target.closest("[data-go-mu]");if(gm){S.sel=gm.dataset.goMu;go("matchup");return}
+  const act=e.target.closest("[data-act]");if(!act)return;const a=act.dataset.act;
+  if(a==="new"){const d=freshDeck("Nuova lista","# Material Deck\n\n# Main Deck\n\n# Sideboard\n");S.decks[d.id]=d;S.current=d.id;S.tab="lista";save();render();$("#deckText")?.focus()}
+  if(a==="dup"){const o=deck();const d=structuredClone(o);d.id=uid();d.name=o.name+" (copia)";d.example=false;d.updated=Date.now();S.decks[d.id]=d;S.current=d.id;save();render();toast("Lista duplicata")}
+  if(a==="del"){if(Object.keys(S.decks).length<2){toast("Serve almeno una lista");return}
+    if(!act.dataset.c){act.dataset.c=1;act.textContent="Conferma";setTimeout(()=>{if(act.isConnected){act.dataset.c="";act.textContent="Elimina"}},4000);return}
+    delete S.decks[S.current];S.current=Object.keys(S.decks)[0];save();render();toast("Lista eliminata")}});
+document.addEventListener("keydown",e=>{if($("#cardModal").hidden)return;if(e.key==="Escape")closeCard();else if(e.key==="ArrowRight")stepCard(1);else if(e.key==="ArrowLeft")stepCard(-1)});
+const onDeck=e=>{S.current=e.target.value;save();render()};$("#deckSel").onchange=onDeck;$("#deckSelM").onchange=onDeck;
+setTimeout(()=>{$("#allCards").innerHTML=DATA.cards.filter(r=>!/TOKEN/.test(r[1])).map(r=>`<option value="${esc(r[0])}">`).join("")},50);
+load();render();
+</script>

@@ -1,0 +1,107 @@
+# GA.Hub · contesto del progetto
+
+Progetto dell'utente, giocatore italiano di **Grand Archive TCG** che gestisce la pagina Instagram
+**GA.Hub (@ga_hub_it)**. Rispondere sempre in **italiano**.
+
+Due filoni, da tenere in conversazioni separate:
+1. **Archive Deck Lab**: l'app di deckbuilding e analisi del meta.
+2. **Social**: il Meta Report settimanale su Instagram (post e storie).
+
+## Dove sta cosa
+
+| Cosa | Dove |
+|---|---|
+| App pubblicata (artifact, privato) | https://claude.ai/artifact/3B9FaRNa6J3yseJZACJwbE |
+| Template dell'app (fonte) | `app/app-template.html` (nell'artifact: `pipeline/app-template.txt`) |
+| Glossario delle parole chiave (dalle Comprehensive Rules) | `app/glossary.json` (nell'artifact: `pipeline/glossary.json`) |
+| Script dei dati, del sito e delle immagini social | `tools/pipeline.py`, che è la **versione di riferimento** (nell'artifact: `pipeline/pipeline.txt`) |
+| Script di pubblicazione su Instagram | `tools/publish_ig.py` |
+| Storico dei post (slide, storie, didascalia) | `posts/AAAA-MM-GG/` |
+| Dati settimanali (bundle, archivio eventi, indice immagini) | solo nell'artifact: `data/bundle.json`, `data/events.json`, `pipeline/imgidx.json`, `cards/sNN.webp` |
+
+### Attività programmata del lunedì
+- Si chiama **"Meta report Grand Archive"**, id `trig_01SGXDGwBhvQg9gmT5DWN7xU`.
+- Parte ogni lunedì alle 07:34 ora di Roma e apre ogni volta una sessione nuova.
+- **La procedura completa sta nel prompt dell'attività.** Leggerlo con `get_trigger` e modificarlo con `update_trigger`. Va inviato il prompt intero, perché un prompt parziale lo sostituisce.
+- Se si cambia il flusso, aggiornare sia il prompt sia questo file.
+
+Passi della procedura:
+1. Legge i file dall'artifact e clona questo repository.
+2. `pipeline.py fetch`, che dura 10–25 minuti.
+3. Scrive il commento settimanale `weekly.md`.
+4. `pipeline.py social` genera 5 slide e 2 storie, poi riscrive la didascalia.
+5. `pipeline.py build` e ripubblica l'artifact.
+6. Carica slide e storie in `posts/<data>/` su main e fa i controlli (`publish_ig.py check` e `whoami`).
+7. Manda una notifica all'utente e **aspetta il suo ok**.
+8. Se l'utente risponde **«pubblica»**, usa `publish_ig.py publish`, che pubblica post e storie. Se risponde **«pubblica solo il post»**, esegue lo stesso comando senza storie.
+
+## Regole e preferenze dell'utente (da rispettare sempre)
+
+### Grand Archive
+- In GA il **mulligan non esiste**: non citarlo mai.
+- Costruzione del mazzo:
+  - main deck di almeno 60 carte, massimo 4 copie per carta;
+  - material deck di al massimo 12 carte diverse, con un champion Lv0 e al massimo 1 Divine Relic;
+  - sideboard di al massimo 15 carte e 15 punti (champion e regalia valgono 3).
+- Gli elementi abilitati dal champion danno solo un **avviso**, non un errore, perché alcuni effetti mettono in gioco carte di altri elementi.
+- Regolamento: rules.gatcg.com (general-rules, game-mechanics).
+
+### Dati
+- Le fonti sono grandarchivestats.com e fractalofin.site; le carte vengono da api.gatcg.com.
+- **Non aggirare Cloudflare.** Le pagine di grandarchivestats con `?window=` sono protette e non vanno usate. I periodi di 30 e 15 giorni si calcolano dagli eventi.
+- Usare solo numeri presenti nei dati, senza inventarne.
+
+### Social
+- **Ogni settimana la lista deve essere di un archetipo diverso** dalle 6 settimane precedenti (`featured_history`).
+- Testi **dentro le immagini in inglese**; **didascalia in italiano**.
+- Il Meta Report #1 è uscito il **16/11/2026**: la numerazione parte da lì.
+- Grafica:
+  - slide 1080×1350, storie 1080×1920;
+  - branding GA.HUB con @ga_hub_it;
+  - **logo dell'espansione della stagione** sempre in alto a destra, nella stessa posizione in ogni immagine;
+  - main deck e sideboard nella stessa slide, material deck in una slide a parte con carte grandi;
+  - la slide 3 mostra l'evento più grande dell'ultima settimana.
+- Crediti sempre presenti: "Dati: grandarchivestats.com" e "Immagini delle carte © Weebs of the Shore".
+- **Su Instagram non si pubblica nulla senza l'ok esplicito dell'utente** nella conversazione. Pubblicare è irreversibile.
+- Le storie via API non possono avere sticker link, menzioni o musica: se servono, l'utente li aggiunge a mano.
+
+### App
+- Interfaccia moderna, con sezioni a tendina (pieghevoli) e intestazione compattabile su mobile.
+- Il periodo di analisi si può scegliere fra stagione, 30 giorni e 15 giorni.
+- Cliccando una carta si apre la sua immagine.
+
+## Instagram: credenziali e scadenze
+- Si usa la Instagram Graph API **con accesso tramite Facebook** (`graph.facebook.com`).
+- @ga_hub_it è un account Business collegato alla Pagina Facebook "GA Hub". L'app Meta è in modalità sviluppo.
+- Il token è un **segreto di rete dell'ambiente** per `graph.facebook.com`: il proxy lo inietta da solo. Non chiederlo in chat e non cercarlo.
+- Per sostituirlo si usa `request_credential` con host `graph.facebook.com`.
+- **Il token scade intorno a metà gennaio 2027.** C'è già un promemoria per il 7/1.
+- Per rigenerarlo:
+  1. Aprire Graph API Explorer e scegliere "Ricevi token d'accesso utente".
+  2. Selezionare i permessi `instagram_basic`, `instagram_content_publish`, `pages_show_list` e `pages_read_engagement`.
+  3. Usare "Estendi token di accesso".
+  4. Salvarlo con `request_credential`.
+- Verifica senza pubblicare: `python3 -I tools/publish_ig.py whoami`.
+- Le immagini devono avere un URL pubblico, per questo stanno in questo repository (pubblico). Instagram le scarica da
+  `https://raw.githubusercontent.com/Zefra115/ga-hub-social/main/posts/<data>/...`.
+
+## Come lavorare
+
+### Sull'app
+1. Modificare `app/app-template.html`. Contiene il segnaposto `/*__DATA__*/null`, dove `build` inserisce i dati.
+2. Leggere i dati attuali dall'artifact con Artifact `read` e `paths`.
+3. Generare la pagina con `pipeline.py build --work <dir> --template app/app-template.html --weekly <weekly.md> --out index.html`.
+4. Ripubblicare sullo stesso URL dell'artifact, passando anche `pipeline/app-template.txt` con il nuovo template, così il lunedì usa la versione aggiornata.
+5. Fare il commit qui.
+- L'app usa le capability `sample` (Claude dentro la pagina, con strumenti per cercare carte, archetipi e regole) e `downloads`.
+- Le liste dell'utente vivono nel suo browser (localStorage `gadl.v2`): non vanno toccate.
+
+### Sui social
+1. Modificare `cmd_social` e `make_stories` in `tools/pipeline.py`.
+2. Provare su un bundle esistente con `pipeline.py social --work <dir>`. La cartella deve contenere `bundle.json` e `imgmap.json`.
+3. Guardare le immagini prima di proporle.
+4. Fare commit e push su main. L'attività del lunedì copia `tools/pipeline.py` da qui.
+
+### Commit
+- Commit diretti su `main`: il repository serve solo a questo progetto.
+- Python sempre con `-I`. Le immagini richiedono PIL; se `python3` non ce l'ha, provare `python3.12`.
