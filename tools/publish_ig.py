@@ -11,7 +11,9 @@ richieste verso l'host dell'API. Qui si manda un valore fittizio.
 Comandi:
   check   --urls U1 ... U5 --caption FILE   controlli prima della pubblicazione (nessun effetto)
   whoami                                      verifica che il token funzioni (username dell'account)
-  publish --urls U1 ... U5 --caption FILE   crea il carosello e lo pubblica (IRREVERSIBILE)
+  publish --urls U1 ... U5 --caption FILE [--story-urls S1 S2]
+                                              pubblica il carosello e poi le storie (IRREVERSIBILE)
+  stories --story-urls S1 S2                  pubblica solo le storie (IRREVERSIBILE)
 """
 import argparse, json, sys, time, urllib.parse, urllib.request, urllib.error
 
@@ -51,11 +53,11 @@ def whoami():
     raise SystemExit(f"ERRORE: nessuna Pagina collegata a @{EXPECTED_USER}. Pagine viste dal token: {seen}")
 
 
-def check(urls, caption):
+def check(urls, caption, story_urls=()):
     probs = []
-    if not 2 <= len(urls) <= 10:
+    if urls and not 2 <= len(urls) <= 10:
         probs.append(f"un carosello vuole 2–10 immagini, qui {len(urls)}")
-    for u in urls:
+    for u in list(urls) + list(story_urls):
         try:
             req = urllib.request.Request(u, method="HEAD", headers={"User-Agent": "gahub-meta-report/1.0"})
             with urllib.request.urlopen(req, timeout=30) as r:
@@ -67,6 +69,8 @@ def check(urls, caption):
                     probs.append(f"{u}: {size} byte, max 8 MB")
         except Exception as e:  # noqa: BLE001
             probs.append(f"{u}: non raggiungibile ({e})")
+    if not urls:
+        return probs
     if len(caption) > 2200:
         probs.append(f"didascalia di {len(caption)} caratteri, max 2200")
     if caption.count("#") > 30:
@@ -104,9 +108,22 @@ def publish(urls, caption):
     return {"media_id": pub["id"], **info}
 
 
+def publish_stories(urls):
+    me = whoami()
+    uid = me["user_id"]
+    out = []
+    for u in urls:
+        c = call("POST", f"{uid}/media", {"image_url": u, "media_type": "STORIES"})
+        wait_ready(c["id"])
+        pub = call("POST", f"{uid}/media_publish", {"creation_id": c["id"]})
+        out.append(pub["id"])
+    return {"stories": out}
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["check", "whoami", "publish"])
+    ap.add_argument("cmd", choices=["check", "whoami", "publish", "stories"])
+    ap.add_argument("--story-urls", nargs="*", default=[])
     ap.add_argument("--urls", nargs="*", default=[])
     ap.add_argument("--caption")
     ap.add_argument("--via", choices=["facebook", "instagram"], default="facebook")
@@ -117,15 +134,23 @@ def main():
     if a.cmd == "whoami":
         print(json.dumps(whoami(), ensure_ascii=False))
         return
-    cap = open(a.caption, encoding="utf-8").read().strip()
-    probs = check(a.urls, cap)
+    if a.cmd == "stories":
+        a.urls = []
+    cap = open(a.caption, encoding="utf-8").read().strip() if a.caption else ""
+    probs = check(a.urls, cap, a.story_urls)
     if probs:
         print("PROBLEMI:\n- " + "\n- ".join(probs))
         sys.exit(2)
     if a.cmd == "check":
-        print(f"OK: {len(a.urls)} immagini, didascalia {len(cap)} caratteri")
+        print(f"OK: {len(a.urls)} slide, {len(a.story_urls)} storie, didascalia {len(cap)} caratteri")
         return
-    print(json.dumps(publish(a.urls, cap), ensure_ascii=False))
+    if a.cmd == "stories":
+        print(json.dumps(publish_stories(a.story_urls), ensure_ascii=False))
+        return
+    res = publish(a.urls, cap)
+    print(json.dumps(res, ensure_ascii=False), flush=True)
+    if a.story_urls:
+        print(json.dumps(publish_stories(a.story_urls), ensure_ascii=False))
 
 
 if __name__ == "__main__":
