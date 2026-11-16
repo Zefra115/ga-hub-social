@@ -18,7 +18,7 @@ Due filoni, da tenere in conversazioni separate:
 | Script di pubblicazione su Instagram | `tools/publish_ig.py` (post da 1 immagine o carosello, storie) |
 | Script delle news da Discord | `tools/news.py`, stato in `news/state.json` |
 | Rulings 101 (regole per neofiti, carosello settimanale) | `tools/rulings.py`, puntate in `rulings/NNN-slug.json` (fonti verificate su rules.gatcg.com, versione `.md` delle pagine) |
-| Reel del Meta Report (video 1080×1920 animato) | `tools/reel.py`, scene in `reels/AAAA-MM-GG.json` |
+| Reel del Meta Report (video 1080×1920 animato) | `tools/reel.py`, scene in `reels/AAAA-MM-GG.json`; musica `tools/music.py` → `assets/music/reel-base.wav` |
 | Storico dei post (slide, storie, didascalia, reel) | `posts/AAAA-MM-GG/` |
 | Dati settimanali (bundle, archivio eventi, indice immagini) | solo nell'artifact: `data/bundle.json`, `data/events.json`, `pipeline/imgidx.json`, `cards/sNN.webp` |
 
@@ -41,7 +41,7 @@ Passi della procedura:
 
 ### Reel del Meta Report (martedì)
 - `tools/reel.py --from-bundle bundle.json --spec reels/<data>.json --out reel.mp4`: scene automatiche (apertura con l'archetipo che cresce di più negli ultimi 15 giorni vs stagione, con lo spirit più giocato e il champion di livello più alto; top 3 dei 30 giorni; chi sale/scende; evento più grande con spirit e champion più alto della lista vincitrice girati dal dorso GA HUB; chiusura "Full report + decklist in our Monday post"). Testi nel video in inglese, didascalia in italiano.
-- Il video non ha musica (l'API non dà accesso agli audio di Instagram).
+- **Musica**: base originale sintetizzata da `tools/music.py` (`assets/music/reel-base.wav`, 120 BPM, Re minore, 10 battute = 20 s). Ogni scena dura **4 s = 2 battute**, così i cambi di scena cadono sugli impatti (boom + piatto) preceduti da un riser. Volume normalizzato a -14 LUFS. Nessuna licenza da gestire. Gli audio di tendenza di Instagram non sono accessibili via API: per quelli serve «reel manuale».
 - **Codifica obbligatoria per l'API**: colore BT.709 dichiarato, audio 48 kHz, GOP regolare (è già nello script). Senza i metadati BT.709 Instagram rifiuta il video con errore 2207076/2207077.
 - **URL del video**: usare `raw.githubusercontent.com` con lo **SHA del commit** (non `main`, per evitare la cache). jsDelivr non funziona.
 - Prima di proporlo: `publish_ig.py reel-check` (Instagram elabora il video senza pubblicarlo; il contenitore scade da solo in 24 h).
