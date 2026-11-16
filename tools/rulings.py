@@ -119,13 +119,14 @@ def render(spec, out, cache):
         print("logo stagione non disponibile:", e, file=sys.stderr)
     os.makedirs(out, exist_ok=True)
     slides = spec["slides"]
-    tot = len(slides)
+    tot = spec.get("page_total", len(slides))
+    off = spec.get("page_offset", 0)
     foot = spec.get("footer", "Regole: rules.gatcg.com · Immagini delle carte © Weebs of the Shore")
     files = []
     for n, s in enumerate(slides, 1):
         kind = s["type"]
         if kind == "cover":
-            im, d, y = P._base(n, tot, s.get("kicker", ""), s["title"], tsize=88)
+            im, d, y = P._base(n + off, tot, s.get("kicker", ""), s["title"], tsize=88)
             if s.get("subtitle"):
                 for ln in P._wrap(d, s["subtitle"], P._font("reg", 34), P.SW - 128):
                     d.text((64, y), ln, font=P._font("reg", 34), fill=P.MUTED)
@@ -133,7 +134,7 @@ def render(spec, out, cache):
             if s.get("cards"):
                 _card_row(P, im, s["cards"], y + 50, P.SH - 130 - (y + 50) - 70, cache, gap=60)
         else:
-            im, d, y = P._base(n, tot, s.get("kicker", ""), s["title"], tsize=s.get("tsize", 58))
+            im, d, y = P._base(n + off, tot, s.get("kicker", ""), s["title"], tsize=s.get("tsize", 58))
             y += 14
             if kind == "recap":
                 y = _bullets(P, d, s["bullets"], y + 20, size=s.get("size", 40))
@@ -169,7 +170,7 @@ def render(spec, out, cache):
                 d.rounded_rectangle([64, y + 50, P.SW - 64, y + 150], 50, outline=P.GOLD, width=3)
                 d.text((P.SW // 2, y + 100), s["cta"], font=f, fill=P.GOLD, anchor="mm")
         P._footer(d, foot)
-        fn = os.path.join(out, f"slide-{n}.jpg")
+        fn = os.path.join(out, f"slide-{n + off}.jpg")
         im.save(fn, quality=92)
         files.append(fn)
     if spec.get("caption"):

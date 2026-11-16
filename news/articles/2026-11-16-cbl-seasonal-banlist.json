@@ -1,0 +1,33 @@
+{
+ "source_url": "https://www.gatcg.com/article/asphodel-cantabile-seasonal-banlist",
+ "footer": "Source: gatcg.com · Card images © Weebs of the Shore",
+ "page_offset": 1,
+ "page_total": 5,
+ "slides": [
+  {"type": "rules", "kicker": "Why Burst Asunder?", "title": "A break from Fractals",
+   "bullets": ["Fractals were the most represented strategy of the .asphodel/paradise season",
+               "Recent improvements made the deck more efficient",
+               "Player frustration with the matchup has been building over time",
+               "Fractal players will have to rethink how they turn their board into a win"],
+   "cards": [{"name": "Burst Asunder", "edition": "AMB"}], "card_h": 520},
+  {"type": "rules", "kicker": "Why Abnegation & Mend Flesh?", "title": "More room for aggro",
+   "bullets": ["Recovery tools that helped Umbra Ciel and Exia Jin survive early pressure",
+               "Without them, aggressive decks can turn early pressure into wins",
+               "Umbra Ciel and Exia Jin players must find new ways to defend"],
+   "cards": [{"name": "Abnegation", "edition": "PTM", "label": "Umbra Ciel"},
+             {"name": "Mend Flesh", "edition": "AMB", "label": "Exia Jin"}], "card_h": 520},
+  {"type": "rules", "kicker": "Back in Standard", "title": "Leaving the Seasonal Banlist",
+   "bullets": ["Baleful Oblation, Fabled Azurite Fatestone and Spirit Blade: Ascension return on December 11th, 2026",
+               "Their strategies will face a field reshaped by the new bans and the new set"],
+   "cards": [{"name": "Baleful Oblation", "edition": "DTR"},
+             {"name": "Fabled Azurite Fatestone", "edition": "HVN 1st"},
+             {"name": "Spirit Blade: Ascension", "edition": "DOA 1st"}], "card_h": 480},
+  {"type": "recap", "kicker": "How it works", "title": "Seasonal Banlist in short",
+   "bullets": ["Effective December 11th, 2026, with the release of .asphodel/cantabile",
+               "Temporary: it lasts from one main-set release to the next",
+               "A card can't be seasonally banned in consecutive seasons",
+               "Cards are eligible only after three main-set releases"],
+   "note": "Long-term balance issues are still handled by the regular Banned & Restricted list.",
+   "cta": "Save this post · Thoughts? Tell us in the comments"}
+ ]
+}

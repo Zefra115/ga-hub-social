@@ -7,9 +7,9 @@
    "id": "1572014356777017435",
    "forwarded_at": "2026-11-16T22:23:49.270000+00:00",
    "original_at": "2026-11-16T22:12:03.013000+00:00",
-   "source": "official Grand Archive Discord",
+   "source": "official Grand Archive announcement (gatcg.com)",
    "text": "",
-   "post": false,
+   "post": true,
    "kicker": "Ban List",
    "images": [
     "1572014356777017435-1-src.jpg"
@@ -17,7 +17,9 @@
    "stories": [
     "1572014356777017435-1-story.jpg"
    ],
-   "posts": [],
+   "posts": [
+    "1572014356777017435-1-post.jpg"
+   ],
    "subtitle": "Seasonal Banlist · .asphodel/cantabile",
    "found_cards": {
     "1": [
@@ -42,5 +44,16 @@
     ]
    }
   }
- ]
+ ],
+ "article": {
+  "url": "https://www.gatcg.com/article/asphodel-cantabile-seasonal-banlist",
+  "carousel": [
+   "banlist-slide-1.jpg",
+   "banlist-slide-2.jpg",
+   "banlist-slide-3.jpg",
+   "banlist-slide-4.jpg",
+   "banlist-slide-5.jpg"
+  ],
+  "caption": "banlist-caption.txt"
+ }
 }
