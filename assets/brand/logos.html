@@ -1,0 +1,59 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;background:#000}
+svg{display:block}
+text{font-family:'Inter Display','Inter',sans-serif}
+</style></head><body>
+<!-- A: stemma esagonale -->
+<svg id="A" width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+ <defs>
+  <radialGradient id="bgA" cx="50%" cy="42%" r="70%"><stop offset="0" stop-color="#2a2550"/><stop offset="1" stop-color="#0d0f17"/></radialGradient>
+  <linearGradient id="hexA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9b0ff"/><stop offset="1" stop-color="#6a5ae0"/></linearGradient>
+  <linearGradient id="goldA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6d77a"/><stop offset="1" stop-color="#c9972c"/></linearGradient>
+ </defs>
+ <rect width="1080" height="1080" fill="url(#bgA)"/>
+ <polygon points="540,150 878,345 878,735 540,930 202,735 202,345" fill="none" stroke="url(#goldA)" stroke-width="14"/>
+ <polygon points="540,190 843,365 843,715 540,890 237,715 237,365" fill="url(#hexA)"/>
+ <text x="540" y="610" text-anchor="middle" font-size="330" font-weight="900" fill="#0d0f17" letter-spacing="-8">GA</text>
+ <rect x="390" y="660" width="300" height="6" rx="3" fill="#0d0f17" opacity=".55"/>
+ <text x="540" y="770" text-anchor="middle" font-size="96" font-weight="800" fill="#0d0f17" letter-spacing="28">HUB</text>
+</svg>
+<!-- B: ventaglio di carte -->
+<svg id="B" width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+ <defs>
+  <radialGradient id="bgB" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="#231f45"/><stop offset="1" stop-color="#0d0f17"/></radialGradient>
+  <linearGradient id="cardB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c3bbff"/><stop offset="1" stop-color="#6a5ae0"/></linearGradient>
+  <linearGradient id="goldB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6d77a"/><stop offset="1" stop-color="#c9972c"/></linearGradient>
+ </defs>
+ <rect width="1080" height="1080" fill="url(#bgB)"/>
+ <g transform="translate(540 700)">
+  <g transform="rotate(-18)"><rect x="-150" y="-470" width="300" height="420" rx="26" fill="#3a3370" stroke="#7d72d9" stroke-width="6"/></g>
+  <g transform="rotate(18)"><rect x="-150" y="-470" width="300" height="420" rx="26" fill="#3a3370" stroke="#7d72d9" stroke-width="6"/></g>
+  <rect x="-165" y="-500" width="330" height="460" rx="30" fill="url(#cardB)" stroke="url(#goldB)" stroke-width="10"/>
+  <rect x="-135" y="-470" width="270" height="400" rx="18" fill="none" stroke="#0d0f17" stroke-opacity=".35" stroke-width="4"/>
+  <text x="0" y="-215" text-anchor="middle" font-size="190" font-weight="900" fill="#0d0f17" letter-spacing="-6">GA</text>
+  <path d="M0,-150 l14,30 l30,14 l-30,14 l-14,30 l-14,-30 l-30,-14 l30,-14z" fill="#0d0f17" opacity=".75"/>
+ </g>
+ <text x="540" y="860" text-anchor="middle" font-size="120" font-weight="900" fill="#eceff6" letter-spacing="2">GA<tspan fill="url(#goldB)">.</tspan>HUB</text>
+</svg>
+<!-- C: hub / rete -->
+<svg id="C" width="1080" height="1080" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+ <defs>
+  <radialGradient id="bgC" cx="50%" cy="50%" r="70%"><stop offset="0" stop-color="#25204a"/><stop offset="1" stop-color="#0d0f17"/></radialGradient>
+  <linearGradient id="coreC" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c3bbff"/><stop offset="1" stop-color="#6a5ae0"/></linearGradient>
+  <linearGradient id="goldC" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6d77a"/><stop offset="1" stop-color="#c9972c"/></linearGradient>
+ </defs>
+ <rect width="1080" height="1080" fill="url(#bgC)"/>
+ <g transform="translate(540 500)" id="net"></g>
+ <circle cx="540" cy="500" r="330" fill="none" stroke="#9d92ff" stroke-opacity=".35" stroke-width="5" stroke-dasharray="4 18" stroke-linecap="round"/>
+ <circle cx="540" cy="500" r="215" fill="url(#coreC)"/>
+ <circle cx="540" cy="500" r="232" fill="none" stroke="url(#goldC)" stroke-width="10"/>
+ <text x="540" y="572" text-anchor="middle" font-size="210" font-weight="900" fill="#0d0f17" letter-spacing="-6">GA</text>
+ <text x="540" y="935" text-anchor="middle" font-size="92" font-weight="800" fill="#eceff6" letter-spacing="34">HUB</text>
+</svg>
+<script>
+const g=document.getElementById('net'),ns='http://www.w3.org/2000/svg';
+for(let i=0;i<6;i++){if(i==3)continue;const a=(i*60-90)*Math.PI/180,x=330*Math.cos(a),y=330*Math.sin(a);
+ const l=document.createElementNS(ns,'line');l.setAttribute('x1',0);l.setAttribute('y1',0);l.setAttribute('x2',x);l.setAttribute('y2',y);l.setAttribute('stroke','#9d92ff');l.setAttribute('stroke-opacity','.5');l.setAttribute('stroke-width','6');g.appendChild(l);
+ const c=document.createElementNS(ns,'circle');c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r',i%2?26:34);c.setAttribute('fill',i%2?'#9d92ff':'url(#goldC)');g.appendChild(c);}
+</script>
+</body></html>
