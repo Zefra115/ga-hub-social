@@ -1,0 +1,122 @@
+{
+ "number": 1,
+ "slug": "main-vs-material",
+ "topic": "Main Deck e Material Deck",
+ "sources": [
+  "https://rules.gatcg.com/general-rules/general-rules-format-conventions",
+  "https://rules.gatcg.com/game-mechanics/game-mechanics-game-zones/game-zones-main-deck",
+  "https://rules.gatcg.com/game-mechanics/game-mechanics-game-zones/game-zones-material-deck",
+  "https://rules.gatcg.com/general-rules/general-rules-card-types/card-types-champion",
+  "https://rules.gatcg.com/game-mechanics/game-mechanics-turn-order/turn-order-materialize-phase",
+  "https://rules.gatcg.com/general-rules/general-rules-starting-the-game"
+ ],
+ "slides": [
+  {
+   "type": "cover",
+   "kicker": "Rulings 101 · #1",
+   "title": "Main Deck vs Material Deck",
+   "subtitle": "In Grand Archive you play with two decks. Here's what goes where.",
+   "cards": [
+    {
+     "name": "Fireball",
+     "edition": "DOA 1st",
+     "label": "Main Deck"
+    },
+    {
+     "name": "Spirit of Fire",
+     "edition": "PRD",
+     "label": "Material Deck"
+    }
+   ]
+  },
+  {
+   "type": "rules",
+   "kicker": "The Main Deck",
+   "title": "The cards you draw",
+   "bullets": [
+    "At least 60 cards",
+    "Up to 4 copies of a card with the same name",
+    "It stays face down and shuffled: you can't look at it or reorder it during the game",
+    "You only draw cards from your main deck"
+   ],
+   "cards": [
+    {
+     "name": "Fireball",
+     "edition": "DOA 1st"
+    }
+   ],
+   "card_h": 620
+  },
+  {
+   "type": "rules",
+   "kicker": "The Material Deck",
+   "title": "Your champions and regalia",
+   "bullets": [
+    "Up to 12 cards, only 1 copy of each",
+    "It must contain at least one Level 0 champion",
+    "Champion cards start the game here",
+    "You can look at it any time"
+   ],
+   "cards": [
+    {
+     "name": "Spirit of Fire",
+     "edition": "PRD"
+    },
+    {
+     "name": "Lorraine, Wandering Warrior",
+     "edition": "PRD"
+    },
+    {
+     "name": "Apotheosis Rite"
+    }
+   ],
+   "card_h": 500
+  },
+  {
+   "type": "steps",
+   "kicker": "In game",
+   "title": "How you use the Material Deck",
+   "steps": [
+    {
+     "title": "Start of the game",
+     "text": "Reveal your Level 0 champion and put it onto the field. It isn't materialized and can't be responded to."
+    },
+    {
+     "title": "Materialize Phase",
+     "text": "Once per turn you may materialize a champion or regalia from your material deck, paying its memory cost. You skip this phase on your first turn."
+    },
+    {
+     "title": "Level up",
+     "text": "A champion one level higher (N+1) goes on top of your champion, into its lineage."
+    }
+   ],
+   "cards": [
+    {
+     "name": "Spirit of Fire",
+     "edition": "PRD",
+     "label": "Lv 0"
+    },
+    {
+     "name": "Lorraine, Wandering Warrior",
+     "edition": "PRD",
+     "label": "Lv 1"
+    }
+   ],
+   "card_h": 380
+  },
+  {
+   "type": "recap",
+   "kicker": "Remember",
+   "title": "Deck building in short",
+   "bullets": [
+    "Main deck: 60+ cards, max 4 copies per name",
+    "Material deck: max 12 cards, all different, with at least one Lv 0 champion",
+    "Sideboard: max 15 cards and 15 points (main deck cards = 1, champions and regalia = 3)",
+    "A champion card that would go to the graveyard is banished instead"
+   ],
+   "note": "Standard Constructed rules. Draft and Pantheon use different limits.",
+   "cta": "Save this post · Questions? Ask in the comments"
+  }
+ ],
+ "caption": "📘 RULINGS 101 · #1: Main Deck e Material Deck\n\nNuova rubrica per chi inizia: ogni giovedì una regola di Grand Archive spiegata semplice 🧠\n\nSi parte dalle basi: in GA giochi con DUE mazzi.\n\n🃏 Main Deck: almeno 60 carte, massimo 4 copie per nome. È il mazzo da cui peschi, coperto e mescolato.\n✨ Material Deck: massimo 12 carte, tutte diverse, con almeno un champion di livello 0. Qui partono champion e regalia, e puoi guardarlo quando vuoi.\n\nA inizio partita il tuo champion Lv 0 va in campo. Dal secondo turno, nella Materialize Phase, puoi materializzare una carta dal material deck, per esempio il champion di livello successivo per salire di livello.\n\n📌 Regole dello Standard Constructed: Draft e Pantheon hanno limiti diversi.\n\n💬 Quale regola vi ha messo più in difficoltà all'inizio? Scrivetecelo e potrebbe diventare la prossima puntata 👇\n\nSalva il post e seguici su @ga_hub_it per una nuova regola ogni giovedì.\nFonte: Comprehensive Rules (rules.gatcg.com). Immagini delle carte © Weebs of the Shore.\n\n#GrandArchive #GrandArchiveTCG #GATCG #TCG #TCGItalia #Rulings #Regole"
+}
