@@ -18,7 +18,8 @@ Due filoni, da tenere in conversazioni separate:
 | Script di pubblicazione su Instagram | `tools/publish_ig.py` (post da 1 immagine o carosello, storie) |
 | Script delle news da Discord | `tools/news.py`, stato in `news/state.json` |
 | Rulings 101 (regole per neofiti, carosello settimanale) | `tools/rulings.py`, puntate in `rulings/NNN-slug.json` (fonti verificate su rules.gatcg.com, versione `.md` delle pagine) |
-| Storico dei post (slide, storie, didascalia) | `posts/AAAA-MM-GG/` |
+| Reel del Meta Report (video 1080×1920 animato) | `tools/reel.py`, scene in `reels/AAAA-MM-GG.json` |
+| Storico dei post (slide, storie, didascalia, reel) | `posts/AAAA-MM-GG/` |
 | Dati settimanali (bundle, archivio eventi, indice immagini) | solo nell'artifact: `data/bundle.json`, `data/events.json`, `pipeline/imgidx.json`, `cards/sNN.webp` |
 
 ### Attività programmata del lunedì
@@ -32,10 +33,18 @@ Passi della procedura:
 2. `pipeline.py fetch`, che dura 10–25 minuti.
 3. Scrive il commento settimanale `weekly.md`.
 4. `pipeline.py social` genera 5 slide e 2 storie, poi riscrive la didascalia.
+   Poi `reel.py --from-bundle` genera il **reel** (scene dai dati della settimana) e la sua didascalia.
 5. `pipeline.py build` e ripubblica l'artifact.
-6. Carica slide e storie in `posts/<data>/` su main e fa i controlli (`publish_ig.py check` e `whoami`).
+6. Carica slide, storie e reel in `posts/<data>/` su main e fa i controlli (`publish_ig.py check`, `reel-check` e `whoami`).
 7. Manda una notifica all'utente e **aspetta il suo ok**.
-8. Se l'utente risponde **«pubblica»**, programma alle 20:00 `publish_ig.py publish`, che pubblica post e storie. Se risponde **«pubblica solo il post»**, lo stesso comando senza storie.
+8. Se l'utente risponde **«pubblica»**, programma alle 20:00 `publish_ig.py publish`, che pubblica post e storie, e il **reel martedì alle 20:00** (`publish_ig.py reel`). Se risponde **«pubblica solo il post»**, lo stesso comando senza storie. «senza reel» esclude il reel; «reel manuale» manda il martedì alle 19:45 video, copertina e didascalia da caricare a mano con un audio di tendenza.
+
+### Reel del Meta Report (martedì)
+- `tools/reel.py --from-bundle bundle.json --spec reels/<data>.json --out reel.mp4`: scene automatiche (apertura con l'archetipo che cresce di più negli ultimi 15 giorni vs stagione, con lo spirit più giocato e il champion di livello più alto; top 3 dei 30 giorni; chi sale/scende; evento più grande con spirit e champion più alto della lista vincitrice girati dal dorso GA HUB; chiusura "Full report + decklist in our Monday post"). Testi nel video in inglese, didascalia in italiano.
+- Il video non ha musica (l'API non dà accesso agli audio di Instagram).
+- **Codifica obbligatoria per l'API**: colore BT.709 dichiarato, audio 48 kHz, GOP regolare (è già nello script). Senza i metadati BT.709 Instagram rifiuta il video con errore 2207076/2207077.
+- **URL del video**: usare `raw.githubusercontent.com` con lo **SHA del commit** (non `main`, per evitare la cache). jsDelivr non funziona.
+- Prima di proporlo: `publish_ig.py reel-check` (Instagram elabora il video senza pubblicarlo; il contenitore scade da solo in 24 h).
 
 ### News da Discord → storie Instagram (ogni giorno)
 - L'utente **inoltra** nel canale **#news** (id `1571935765556891738`) del server Discord "Grand Archive TCG ITALIA" i messaggi del Discord ufficiale (spoiler, annunci, ecc.).
