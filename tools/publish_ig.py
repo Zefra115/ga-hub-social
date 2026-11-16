@@ -14,6 +14,11 @@ Comandi:
   publish --urls U1 [... U10] --caption FILE [--story-urls S1 S2]
                                               pubblica il post (1 immagine o carosello) e poi le storie (IRREVERSIBILE)
   stories --story-urls S1 S2                  pubblica solo le storie (IRREVERSIBILE)
+  reel-check --video-url V [--cover-url C] --caption FILE
+                                              crea il contenitore del reel e aspetta che Instagram elabori
+                                              il video, SENZA pubblicarlo (il contenitore scade da solo in 24 h)
+  reel --video-url V [--cover-url C] --caption FILE
+                                              pubblica il reel (IRREVERSIBILE)
 """
 import argparse, json, sys, time, urllib.parse, urllib.request, urllib.error
 
@@ -114,6 +119,23 @@ def publish(urls, caption):
     return {"media_id": pub["id"], **info}
 
 
+def reel_container(video_url, cover_url, caption):
+    me = whoami()
+    p = {"media_type": "REELS", "video_url": video_url, "caption": caption, "share_to_feed": "true"}
+    if cover_url:
+        p["cover_url"] = cover_url
+    c = call("POST", f"{me['user_id']}/media", p)
+    wait_ready(c["id"], tries=72)  # fino a 6 minuti di elaborazione
+    return me["user_id"], c["id"]
+
+
+def publish_reel(video_url, cover_url, caption):
+    uid, cid = reel_container(video_url, cover_url, caption)
+    pub = call("POST", f"{uid}/media_publish", {"creation_id": cid})
+    info = call("GET", pub["id"], {"fields": "permalink,timestamp"})
+    return {"media_id": pub["id"], **info}
+
+
 def publish_stories(urls):
     me = whoami()
     uid = me["user_id"]
@@ -128,7 +150,9 @@ def publish_stories(urls):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["check", "whoami", "publish", "stories"])
+    ap.add_argument("cmd", choices=["check", "whoami", "publish", "stories", "reel-check", "reel"])
+    ap.add_argument("--video-url")
+    ap.add_argument("--cover-url")
     ap.add_argument("--story-urls", nargs="*", default=[])
     ap.add_argument("--urls", nargs="*", default=[])
     ap.add_argument("--caption")
@@ -143,6 +167,21 @@ def main():
     if a.cmd == "stories":
         a.urls = []
     cap = open(a.caption, encoding="utf-8").read().strip() if a.caption else ""
+    if a.cmd in ("reel-check", "reel"):
+        if not a.video_url or not cap:
+            raise SystemExit("servono --video-url e --caption")
+        if len(cap) > 2200:
+            raise SystemExit(f"didascalia di {len(cap)} caratteri, max 2200")
+        probs = check([], cap, [a.cover_url] if a.cover_url else [])
+        if probs:
+            print("PROBLEMI:\n- " + "\n- ".join(probs))
+            sys.exit(2)
+        if a.cmd == "reel-check":
+            uid, cid = reel_container(a.video_url, a.cover_url, cap)
+            print(f"OK: video elaborato da Instagram (contenitore {cid}, NON pubblicato; scade da solo in 24 h)")
+            return
+        print(json.dumps(publish_reel(a.video_url, a.cover_url, cap), ensure_ascii=False))
+        return
     probs = check(a.urls, cap, a.story_urls)
     if probs:
         print("PROBLEMI:\n- " + "\n- ".join(probs))

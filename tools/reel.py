@@ -2,6 +2,9 @@
 """Reel del Meta Report (1080x1920, 30 fps, ~18 s, senza audio: la musica si aggiunge dall'app).
 
   python3 -I tools/reel.py --spec reels/2026-11-16.json --out reel.mp4 [--work DIR] [--preview]
+  python3 -I tools/reel.py --from-bundle W/run/bundle.json --spec reels/<data>.json [--out reel.mp4]
+      (scene costruite in automatico dai dati della settimana: archetipo che cresce di più con spirit e
+       champion di livello più alto, top 3, chi sale/scende, evento più grande con le carte della lista vincitrice)
 
 Scene (spec JSON, testi in inglese come le altre grafiche del meta report):
   hook    → titolo d'impatto, spirit + champion più alto dell'archetipo in crescita, percentuale che sale
@@ -398,23 +401,126 @@ def render(spec, out, work, preview=False):
     if preview:
         print("anteprima:", os.path.join(work, "preview.jpg"))
         return
+    # codifica accettata dall'API di Instagram per i reel: BT.709 dichiarato, 48 kHz, GOP regolare
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", os.path.join(frames_dir, "f%05d.jpg"),
-           "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-shortest",
-           "-c:v", "libx264", "-profile:v", "high", "-pix_fmt", "yuv420p", "-r", str(FPS), "-b:v", "8M", "-maxrate", "10M", "-bufsize", "16M",
-           "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", out]
+           "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000", "-shortest",
+           "-vf", "scale=1080:1920:out_color_matrix=bt709:out_range=tv,format=yuv420p",
+           "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", "-color_range", "tv",
+           "-c:v", "libx264", "-profile:v", "high", "-level", "4.1", "-r", str(FPS), "-g", "60", "-keyint_min", "60", "-sc_threshold", "0",
+           "-b:v", "5M", "-maxrate", "6M", "-bufsize", "10M", "-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2",
+           "-movflags", "+faststart", "-tag:v", "avc1", out]
     subprocess.run(cmd, check=True)
     # copertina del reel (fotogramma dell'hook)
     Image.open(os.path.join(frames_dir, f"f{int(scenes[0]['dur'] * FPS) - 8:05d}.jpg")).save(os.path.splitext(out)[0] + "-cover.jpg", quality=92)
     print(json.dumps({"video": out, "seconds": n / FPS, "frames": n, "preview": os.path.join(work, "preview.jpg")}))
 
 
+# ------------------------------------------------------------------ spec automatica dai dati della settimana
+_INFO = {}
+
+
+def card_info(name):
+    """Livello, tipi ed edizione 'normale' di una carta dall'indice ufficiale (api.gatcg.com)."""
+    import re, urllib.parse, urllib.request
+    if name not in _INFO:
+        req = urllib.request.Request(f"https://api.gatcg.com/cards/search?name={urllib.parse.quote(name)}", headers={"User-Agent": "gahub-reel/1.0"})
+        data = json.load(urllib.request.urlopen(req, timeout=40))["data"]
+        c = next((c for c in data if c["name"].lower() == name.lower()), None)
+        if not c:
+            _INFO[name] = None
+        else:
+            pref = [(e.get("set") or {}).get("prefix") or "" for e in c["editions"]]
+            ed = next((p for p in pref if re.fullmatch(r"[A-Z]{3}", p)), None) or next((p for p in pref if re.fullmatch(r"[A-Z]{3} 1st", p)), None) or (pref[0] if pref else None)
+            _INFO[name] = {"level": c.get("level"), "types": c.get("types") or [], "element": c.get("element"), "edition": ed}
+    return _INFO[name]
+
+
+def spirit_and_top(material):
+    """material: [[nome, %liste, wr], ...] oppure [nome, ...]. Ritorna [spirit Lv0 più giocato, champion di livello più alto]."""
+    rows = [m if isinstance(m, list) else [m, 100.0] for m in material]
+    champs = []
+    for r in rows:
+        i = card_info(r[0])
+        if i and "CHAMPION" in i["types"] and i["level"] is not None:
+            champs.append((r[0], float(r[1]), i))
+    spirits = sorted([c for c in champs if c[2]["level"] == 0], key=lambda c: -c[1])
+    tops = sorted([c for c in champs if c[2]["level"] > 0 and c[1] >= 50], key=lambda c: (-c[2]["level"], -c[1])) \
+        or sorted([c for c in champs if c[2]["level"] > 0], key=lambda c: (-c[2]["level"], -c[1]))
+    out = []
+    for c in (spirits[:1] + tops[:1]):
+        out.append({"name": c[0], "edition": c[2]["edition"], "label": f"Lv {c[2]['level']}"})
+    return out
+
+
+def list_material(txt):
+    out, on = [], False
+    for ln in (txt or "").splitlines():
+        if ln.startswith("#"):
+            on = "material" in ln.lower()
+            continue
+        if on and ln.strip():
+            out.append(ln.strip().split(" ", 1)[1])
+    return out
+
+
+def spec_from_bundle(b):
+    import datetime
+    snap, meta = b["snap"], b["meta"]
+    season = {m["n"]: m for m in meta}
+    W30, W15 = (b.get("win") or {}).get("d30"), (b.get("win") or {}).get("d15")
+    D0 = datetime.date.fromisoformat(snap["date"])
+    issue = max(1, (D0 - datetime.date(2026, 11, 16)).days // 7 + 1)
+    rank = sorted([[n, v[1], v[2]] for n, v in W30["meta"].items()], key=lambda x: -x[1])
+    mv = [[n, round(v[1] - season[n]["share"], 1), season[n]["share"], v[1], v[2]] for n, v in W15["meta"].items()
+          if n in season and (v[1] >= 1 or season[n]["share"] >= 1)]
+    up = sorted([m for m in mv if m[1] > 0], key=lambda m: -m[1])[:3]
+    dn = sorted([m for m in mv if m[1] < 0], key=lambda m: m[1])[:3]
+    h = up[0]
+    ratio = h[3] / h[2] if h[2] else 99
+    verb = ("more than tripled" if ratio >= 3 else "almost tripled" if ratio >= 2.6 else "doubled" if ratio >= 2 else
+            "almost doubled" if ratio >= 1.8 else "is on the rise")
+    elem = h[0].split()[0]
+    scenes = [
+        {"type": "hook", "dur": 4.0, "kicker": f"Meta Report #{issue} · last 15 days", "title": f"{h[0]} {verb}",
+         "element": elem, "from": h[2], "to": h[3], "sub": f"meta share · last 15 days · {h[4]}% WR", "emoji": "🚀",
+         "cards": spirit_and_top((b.get("cons") or {}).get(h[0], {}).get("material", []))},
+        {"type": "top3", "dur": 4.2, "kicker": "Most played · last 30 days", "title": "Top 3 archetypes",
+         "rows": [{"name": r[0], "share": r[1], "wr": r[2]} for r in rank[:3]]},
+        {"type": "movers", "dur": 4.2, "kicker": "Last 15 days vs season", "title": "Who's rising?",
+         "up": [{"name": m[0], "delta": m[1]} for m in up], "down": [{"name": m[0], "delta": m[1]} for m in dn]},
+    ]
+    wk, feat = b.get("week_event"), b.get("featured")
+    if wk and wk.get("top"):
+        win = wk["top"][0]
+        parts = [p.strip() for p in wk["name"].split(" - ")]
+        cat = {"regionals": "Regional", "nationals": "Nationals", "ascent": "Ascent", "worlds": "Worlds"}.get((wk.get("cat") or "").lower(), "")
+        ev = parts[0] + (f" {cat}" if cat and cat.lower() not in parts[0].lower() else "")
+        if feat and feat.get("arch") == win[1] and feat.get("player") == win[2]:
+            mat = list_material(feat.get("list"))
+        else:
+            mat = (b.get("cons") or {}).get(win[1], {}).get("material", [])
+        scenes.append({"type": "event", "dur": 4.2, "kicker": "Biggest event of the week", "event": ev,
+                       "detail": f"{wk['players']} players · {snap['season']}", "winner": win[2], "deck": win[1],
+                       "cards": spirit_and_top(mat)})
+    scenes.append({"type": "cta", "dur": 3.0, "title": "Full report + decklist in our Monday post",
+                   "sub": "New Meta Report every Monday", "button": "Follow @ga_hub_it"})
+    return {"issue": issue, "date": snap["date"], "season": snap["season"], "logo": "assets/brand/logo-GA-HUB.png", "scenes": scenes}
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--spec", required=True)
-    ap.add_argument("--out", required=True)
+    ap.add_argument("--spec", help="file JSON delle scene (in ingresso, o in uscita con --from-bundle)")
+    ap.add_argument("--from-bundle", help="bundle.json della settimana: genera la spec in --spec")
+    ap.add_argument("--out")
     ap.add_argument("--work")
     ap.add_argument("--preview", action="store_true")
     a = ap.parse_args()
+    if a.from_bundle:
+        spec = spec_from_bundle(json.load(open(a.from_bundle, encoding="utf-8")))
+        json.dump(spec, open(a.spec, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print(json.dumps(spec, ensure_ascii=False)[:1500])
+        if not a.out:
+            return
     spec = json.load(open(a.spec, encoding="utf-8"))
     render(spec, a.out, a.work or os.path.splitext(a.out)[0] + "_work", a.preview)
 
