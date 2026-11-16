@@ -54,6 +54,7 @@ Passi della procedura:
 - Script: `tools/news.py scan --work DIR` (scarica e genera storie/post + `manifest.json`), `render` (rigenera dopo aver cambiato il `kicker`: News, Spoiler, Event, Ban list…), `done --last-id ID` (avanza `news/state.json` dopo la pubblicazione).
 - Grafica: intestazione con GA.HUB a sinistra e, in alto a destra, **logo Grand Archive** (`assets/ga-logo.png`) accanto al logo dell'espansione.
 - **Spoiler** (kicker "Spoiler"): la carta viene trovata in automatico nell'immagine (`find_card`) e mostrata **grande e leggibile**, con l'**artwork della carta sfocato** dietro e il titolo **🔥 SPOILER ALERT 🔥**. Il campo `subtitle` del manifest (inglese, es. ".asphodel/cantabile · December 11th, 2026") va sotto il titolo. Se la carta non viene trovata o il ritaglio è sbagliato: `card_boxes: {"N": [x0,y0,x1,y1]}` in frazioni dell'immagine, poi `render`.
+- **Ban List** (kicker "Ban List"): tutte le carte dell'immagine vengono trovate (`find_cards`) e mostrate grandi (2 per riga), con il titolo **🚫 BAN LIST 🚫** e il `subtitle` (es. "Seasonal Banlist · .asphodel/cantabile"). Per correggere: `card_boxes: {"N": [[x0,y0,x1,y1], ...]}`.
 - Le altre news usano l'immagine intera su sfondo sfocato con l'etichetta del kicker.
 - File pubblicati in `posts/news/AAAA-MM-GG/`.
 - **Nessun controllo automatico.** Le news escono in modo irregolare: è l'utente a scrivere **«controllo news»**. L'attività programmata "News Discord GA.Hub" (`trig_012Xbhmx2WYtyFm18KjUHwbh`) è **disattivata** e resta solo come riferimento.

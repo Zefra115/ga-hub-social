@@ -1,30 +1,44 @@
 {
- "scanned_at": "2026-11-16T17:58:33",
- "prev_last_id": "0",
- "last_id": "1571946261735674031",
+ "scanned_at": "2026-11-16T22:30:39",
+ "prev_last_id": "1571946261735674031",
+ "last_id": "1572014356777017435",
  "items": [
   {
-   "id": "1571946261735674031",
-   "forwarded_at": "2026-11-16T17:53:14.147000+00:00",
-   "original_at": "2026-11-14T13:50:04.372000+00:00",
+   "id": "1572014356777017435",
+   "forwarded_at": "2026-11-16T22:23:49.270000+00:00",
+   "original_at": "2026-11-16T22:12:03.013000+00:00",
    "source": "official Grand Archive Discord",
    "text": "",
    "post": false,
-   "kicker": "Spoiler",
+   "kicker": "Ban List",
    "images": [
-    "1571946261735674031-1-src.jpg"
+    "1572014356777017435-1-src.jpg"
    ],
    "stories": [
-    "1571946261735674031-1-story.jpg"
+    "1572014356777017435-1-story.jpg"
    ],
    "posts": [],
-   "subtitle": ".asphodel/cantabile · December 11th, 2026",
+   "subtitle": "Seasonal Banlist · .asphodel/cantabile",
    "found_cards": {
     "1": [
-     1359,
-     181,
-     1845,
-     854
+     [
+      190,
+      284,
+      616,
+      873
+     ],
+     [
+      748,
+      284,
+      1174,
+      873
+     ],
+     [
+      1307,
+      284,
+      1733,
+      873
+     ]
     ]
    }
   }

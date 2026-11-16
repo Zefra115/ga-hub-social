@@ -182,6 +182,56 @@ def find_card(src):
     return best[1] if best else None
 
 
+def find_cards(src):
+    """Tutte le carte di un'immagine con più carte affiancate (es. ban list): coppie di bordi scuri
+    consecutivi con proporzioni da carta. Ritorna una lista di box (x0, y0, x1, y1) da sinistra a destra."""
+    import numpy as np
+    a = np.asarray(src.convert("RGB")).max(axis=2) < 50
+    H, W = a.shape
+    good = []
+    for x in range(W):
+        col = a[:, x]
+        best = cur = s = bs = 0
+        for i, v in enumerate(col):
+            if v:
+                if cur == 0:
+                    s = i
+                cur += 1
+                if cur > best:
+                    best, bs = cur, s
+            else:
+                cur = 0
+        if best > 0.3 * H:
+            good.append((x, best, bs))
+    if len(good) < 2:
+        return []
+    groups, cur = [], [good[0]]
+    for g in good[1:]:
+        if g[0] - cur[-1][0] > 3:
+            groups.append(cur)
+            cur = [g]
+        else:
+            cur.append(g)
+    groups.append(cur)
+    out, i = [], 0
+    while i < len(groups) - 1:
+        L, R = groups[i], groups[i + 1]
+        x0, x1 = L[0][0], R[-1][0]
+        cols = L + R
+        y0 = int(np.median([c[2] for c in cols]))
+        y1 = int(np.median([c[2] + c[1] for c in cols]))
+        w, h = x1 - x0, y1 - y0
+        if h > 0 and 0.64 < w / h < 0.80:
+            out.append((x0, y0, x1, y1))
+            i += 2
+        else:
+            i += 1
+    return out
+
+
+TITLES = {"spoiler": ("SPOILER ALERT", "🔥"), "ban list": ("BAN LIST", "🚫")}
+
+
 def _emoji(ch, size):
     from PIL import Image, ImageDraw, ImageFont
     f = ImageFont.truetype(EMOJI_FONT, 109)
@@ -267,54 +317,68 @@ def _frame(P, W, H, src, kicker, source, area_top, area_bot):
     return im
 
 
-def _spoiler(P, W, H, src, box, subtitle, source):
-    """Layout spoiler: carta grande al centro, artwork della carta sfocato dietro, 🔥 SPOILER ALERT 🔥."""
+def _cards(P, W, H, src, boxes, label, emo, subtitle, source):
+    """Carte grandi e leggibili (1 al centro; 2 affiancate; 3-4 su due righe), artwork della prima carta
+    sfocato dietro, titolo con emoji (es. 🔥 SPOILER ALERT 🔥, 🚫 BAN LIST 🚫)."""
     from PIL import Image, ImageDraw, ImageFilter
     story = H > 1500
-    card = src.crop(box)
-    cw, ch = card.size
-    art = card.crop((int(cw * .06), int(ch * .09), int(cw * .94), int(ch * .58)))  # illustrazione della carta
+    cards = [src.crop(b) for b in boxes]
+    cw, ch = cards[0].size
+    art = cards[0].crop((int(cw * .06), int(ch * .09), int(cw * .94), int(ch * .58)))  # illustrazione della carta
     im = _cover(art, W, H, 22, 0.62)
     _shade(im, 560 if story else 330, 520 if story else 260, P.BG)
     top = 170 if story else 0
     d = _header(P, im, W, top)
-    # titolo
     ty = top + (190 if story else 160)
     tsize = 66 if story else 56
     f = P._font("black", tsize)
-    label = "SPOILER ALERT"
     tw = d.textlength(label, font=f)
-    fire = _emoji("🔥", int(tsize * 1.05))
-    total = tw + 2 * (fire.width + 22)
+    e = _emoji(emo, int(tsize * 1.05))
+    total = tw + 2 * (e.width + 22)
     x = int((W - total) / 2)
-    im.paste(fire, (x, ty - 4), fire)
-    d.text((x + fire.width + 22, ty + tsize // 2), label, font=f, fill=P.FG, anchor="lm")
-    im.paste(fire, (int(x + fire.width + 44 + tw), ty - 4), fire)
+    im.paste(e, (x, ty - 4), e)
+    d.text((x + e.width + 22, ty + tsize // 2), label, font=f, fill=P.FG, anchor="lm")
+    im.paste(e, (int(x + e.width + 44 + tw), ty - 4), e)
     y = ty + tsize + 22
     if subtitle:
         d.text((W // 2, y), subtitle, font=P._font("semi", 30 if story else 26), fill=P.GOLD, anchor="ma")
         y += 50
-    # carta
     foot = H - 400 + 40 if story else H - 116
-    avail_h = foot - 40 - (y + 20)
-    th = min(avail_h, int((W - 300) / (cw / ch)) if story else avail_h)
-    tw_ = int(th * cw / ch)
-    big = card.resize((tw_, th), Image.LANCZOS).filter(ImageFilter.UnsharpMask(2, 60, 2))
-    cx, cy = (W - tw_) // 2, y + 20 + (avail_h - th) // 2
-    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(glow).rounded_rectangle([cx - 10, cy - 10, cx + tw_ + 10, cy + th + 10], 40, fill=P.ACC + (150,))
-    glow = glow.filter(ImageFilter.GaussianBlur(28))
-    im.paste(glow, (0, 0), glow)
-    shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(shadow).rounded_rectangle([cx + 6, cy + 16, cx + tw_ + 6, cy + th + 16], 30, fill=(0, 0, 0, 170))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(16))
-    im.paste(shadow, (0, 0), shadow)
-    mask = Image.new("L", big.size, 0)
-    ImageDraw.Draw(mask).rounded_rectangle([0, 0, tw_ - 1, th - 1], int(tw_ * 0.045), fill=255)
-    im.paste(big, (cx, cy), mask)
+    n = len(cards)
+    cols = 1 if n == 1 else 2
+    rows = (n + cols - 1) // cols
+    gap = 36
+    area_t, area_b = y + 20, foot - 40
+    ratio = cw / ch
+    th = int(min((area_b - area_t - gap * (rows - 1)) / rows,
+                 ((W - 300) if n == 1 and story else (W - 128 - gap * (cols - 1)) / cols) / ratio))
+    tw_ = int(th * ratio)
+    oy = area_t + (area_b - area_t - (rows * th + gap * (rows - 1))) // 2
+    for k, card in enumerate(cards):
+        r, c = divmod(k, cols)
+        in_row = min(cols, n - r * cols)
+        rw = in_row * tw_ + (in_row - 1) * gap
+        cx = (W - rw) // 2 + c * (tw_ + gap)
+        cy = oy + r * (th + gap)
+        big = card.resize((tw_, th), Image.LANCZOS).filter(ImageFilter.UnsharpMask(2, 60, 2))
+        glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        ImageDraw.Draw(glow).rounded_rectangle([cx - 8, cy - 8, cx + tw_ + 8, cy + th + 8], 34, fill=P.ACC + (110,))
+        glow = glow.filter(ImageFilter.GaussianBlur(24))
+        im.paste(glow, (0, 0), glow)
+        shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        ImageDraw.Draw(shadow).rounded_rectangle([cx + 6, cy + 14, cx + tw_ + 6, cy + th + 14], 26, fill=(0, 0, 0, 170))
+        shadow = shadow.filter(ImageFilter.GaussianBlur(14))
+        im.paste(shadow, (0, 0), shadow)
+        mask = Image.new("L", big.size, 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, tw_ - 1, th - 1], int(tw_ * 0.045), fill=255)
+        im.paste(big, (cx, cy), mask)
     d = ImageDraw.Draw(im)
     _footer_block(P, d, W, foot, source)
     return im
+
+
+def _spoiler(P, W, H, src, box, subtitle, source):
+    return _cards(P, W, H, src, [box], "SPOILER ALERT", "🔥", subtitle, source)
 
 
 def render(work, man):
@@ -329,16 +393,25 @@ def render(work, man):
         kicker = it.get("kicker") or "News"
         for n, f in enumerate(it["images"], 1):
             src = Image.open(f).convert("RGB")
-            box = None
-            if kicker.lower() == "spoiler":
-                cb = (it.get("card_boxes") or {}).get(str(n))  # correzione manuale: frazioni [x0,y0,x1,y1]
-                box = tuple(int(v * (src.width if i % 2 == 0 else src.height)) for i, v in enumerate(cb)) if cb else find_card(src)
-                it.setdefault("found_cards", {})[str(n)] = list(box) if box else None
+            boxes = []
+            k = kicker.lower()
+            if k in TITLES:
+                cb = (it.get("card_boxes") or {}).get(str(n))  # correzione manuale: frazioni [x0,y0,x1,y1] o lista di box
+                if cb:
+                    cb = cb if isinstance(cb[0], list) else [cb]
+                    boxes = [tuple(int(v * (src.width if i % 2 == 0 else src.height)) for i, v in enumerate(bx)) for bx in cb]
+                elif k == "spoiler":
+                    bx = find_card(src)
+                    boxes = [bx] if bx else []
+                else:
+                    boxes = find_cards(src)
+                it.setdefault("found_cards", {})[str(n)] = [list(bx) for bx in boxes] or None
             for kind, (W, H) in (("story", (ST_W, ST_H)), ("post", (P.SW, P.SH))):
                 if kind == "post" and not it.get("post"):
                     continue
-                if box:
-                    out_im = _spoiler(P, W, H, src, box, it.get("subtitle", ""), it["source"])
+                if boxes:
+                    label, emo = TITLES[k]
+                    out_im = _cards(P, W, H, src, boxes, label, emo, it.get("subtitle", ""), it["source"])
                 else:
                     out_im = _frame(P, W, H, src, kicker, it["source"], 0, 400 if kind == "story" else 130)
                 out = os.path.join(work, f"{it['id']}-{n}-{kind}.jpg")
