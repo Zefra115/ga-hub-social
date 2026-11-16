@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Reel del Meta Report (1080x1920, 30 fps, ~23 s, con base dubstep originale di tools/music.py a 140 BPM:
-ogni scena dura un numero intero di battute, 2-3-3-3-2, e i cambi di scena cadono sugli impatti).
+"""Reel del Meta Report (1080x1920, 30 fps, ~24 s, con base lounge originale di tools/music.py a 105 BPM:
+ogni scena dura 2 battute (~4,6 s) e i cambi di scena cadono sulle transizioni della musica).
 
   python3 -I tools/reel.py --spec reels/2026-11-16.json --out reel.mp4 [--work DIR] [--preview]
   python3 -I tools/reel.py --from-bundle W/run/bundle.json --spec reels/<data>.json [--out reel.mp4]
@@ -411,7 +411,7 @@ def render(spec, out, work, preview=False):
     # codifica accettata dall'API di Instagram per i reel: BT.709 dichiarato, 48 kHz, GOP regolare
     # musica: base originale (tools/music.py) a 120 BPM, 2 battute = 4 s = una scena; se manca, audio muto
     total = n / FPS
-    style = spec.get("style", "dubstep")
+    style = spec.get("style", "lounge")
     secs = [sc.get("bars") for sc in scenes]
     if bpm and all(secs):
         default_music = f"assets/music/{style}-{int(bpm)}-{'-'.join(str(x) for x in secs)}.wav"
@@ -515,9 +515,9 @@ def spec_from_bundle(b):
         {"type": "hook", "bars": 2, "kicker": f"Meta Report #{issue} · last 15 days", "title": f"{h[0]} {verb}",
          "element": elem, "from": h[2], "to": h[3], "sub": f"meta share · last 15 days · {h[4]}% WR", "emoji": "🚀",
          "cards": spirit_and_top((b.get("cons") or {}).get(h[0], {}).get("material", []))},
-        {"type": "top3", "bars": 3, "kicker": "Most played · last 30 days", "title": "Top 3 archetypes",
+        {"type": "top3", "bars": 2, "kicker": "Most played · last 30 days", "title": "Top 3 archetypes",
          "rows": [{"name": r[0], "share": r[1], "wr": r[2]} for r in rank[:3]]},
-        {"type": "movers", "bars": 3, "kicker": "Last 15 days vs season", "title": "Who's rising?",
+        {"type": "movers", "bars": 2, "kicker": "Last 15 days vs season", "title": "Who's rising?",
          "up": [{"name": m[0], "delta": m[1]} for m in up], "down": [{"name": m[0], "delta": m[1]} for m in dn]},
     ]
     wk, feat = b.get("week_event"), b.get("featured")
@@ -530,13 +530,13 @@ def spec_from_bundle(b):
             mat = list_material(feat.get("list"))
         else:
             mat = (b.get("cons") or {}).get(win[1], {}).get("material", [])
-        scenes.append({"type": "event", "bars": 3, "kicker": "Biggest event of the week", "event": ev,
+        scenes.append({"type": "event", "bars": 2, "kicker": "Biggest event of the week", "event": ev,
                        "detail": f"{wk['players']} players · {snap['season']}", "winner": win[2], "deck": win[1],
                        "cards": spirit_and_top(mat)})
     scenes.append({"type": "cta", "bars": 2, "title": "Full report + decklist in our Monday post",
                    "sub": "New Meta Report every Monday", "button": "Follow @ga_hub_it"})
     return {"issue": issue, "date": snap["date"], "season": snap["season"], "logo": "assets/brand/logo-GA-HUB.png",
-            "style": "dubstep", "bpm": 140, "scenes": scenes}
+            "style": "lounge", "bpm": 105, "scenes": scenes}
 
 
 def main():

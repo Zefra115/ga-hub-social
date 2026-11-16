@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Base musicale originale per i reel GA.Hub, sintetizzata da zero (nessun campione, nessuna licenza).
 
+  python3 -I tools/music.py --style lounge --bpm 105 --sections 2,2,2,2,2 --out assets/music/lounge.wav
   python3 -I tools/music.py --style dubstep --bpm 140 --sections 2,3,3,3,2 --out assets/music/dubstep.wav
   python3 -I tools/music.py --style epic --bars 10 --bpm 120 --out assets/music/reel-base.wav
 
 --sections: battute di ogni scena del reel; all'inizio di ogni scena c'è un impatto (preceduto da un riser).
 
-Stile "dubstep" (predefinito): mezzo tempo (cassa sull'1, rullante sul 3), basso wobble con filtro
+Stile "lounge" (predefinito): chillhop morbido a 105 BPM con swing, piano elettrico tipo Rhodes (FM) su
+accordi di nona (Fm9, Dbmaj9, Bbm9, C7), basso caldo, cassa morbida, rimshot e shaker, fruscio da vinile,
+riverbero; transizioni soffici. Nessuna melodia.
+
+Stile "dubstep": mezzo tempo (cassa sull'1, rullante sul 3), basso wobble con filtro
 modulato a velocità diverse (1/4, 1/8, terzine, 1/16), sub-basso sinusoidale, distorsione, pad scuro
 molto basso, niente melodia. Fa minore.
 
@@ -387,16 +392,150 @@ def render_dubstep(sections=(2, 3, 3, 3, 2), bpm=140, seed=1):
     return st
 
 
+def render_lounge(sections=(2, 2, 2, 2, 2), bpm=105, seed=1):
+    """Lounge / chillhop: Rhodes in FM con accordi di nona, basso caldo, batteria morbida con swing,
+    fruscio da vinile. Transizioni soffici (swell + colpo sordo leggero), nessuna melodia."""
+    rng = np.random.default_rng(seed)
+    beat = 60 / bpm
+    bar = 4 * beat
+    swing = 0.12 * beat  # ritardo delle crome in levare
+    bars = sum(sections)
+    end = bars * bar
+    total = end + 2.0
+    n = int(total * SR)
+    L, R = np.zeros(n), np.zeros(n)
+    sendL, sendR = np.zeros(n), np.zeros(n)  # mandata al riverbero
+    starts = np.cumsum([0] + list(sections))[:-1]
+
+    def add(sig, start, gain=1.0, pan=0.0, verb=0.0):
+        i0 = int(start * SR)
+        if i0 >= n:
+            return
+        if i0 < 0:
+            sig, i0 = sig[-i0:], 0
+        sig = sig[: n - i0]
+        gl, gr = gain * (1 - max(0, pan)), gain * (1 + min(0, pan))
+        L[i0:i0 + len(sig)] += sig * gl
+        R[i0:i0 + len(sig)] += sig * gr
+        if verb:
+            sendL[i0:i0 + len(sig)] += sig * gl * verb
+            sendR[i0:i0 + len(sig)] += sig * gr * verb
+
+    # --- piano elettrico (FM: portante + modulante 1:1 con indice che decade, più un "tine" a 14x)
+    def rhodes(f, dur, vel=1.0):
+        tt = t_arr(dur)
+        idx = 1.6 * vel * np.exp(-tt * 3.0) + 0.25
+        mod = np.sin(2 * np.pi * f * tt)
+        body = np.sin(2 * np.pi * f * tt + idx * mod)
+        tine = 0.18 * vel * np.sin(2 * np.pi * f * 14 * tt) * np.exp(-tt * 18)
+        env = np.minimum(1, tt / 0.004) * np.exp(-tt * 1.1) * np.minimum(1, (dur - tt) / 0.08)
+        return (body + tine) * env * vel
+
+    chords = [  # Fm9, Dbmaj9, Bbm9, C7sus4→C7 (voicing centrali)
+        [("F", 2), ("Ab", 3), ("C", 4), ("Eb", 4), ("G", 4)],
+        [("Db", 2), ("F", 3), ("Ab", 3), ("C", 4), ("Eb", 4)],
+        [("Bb", 1), ("Db", 3), ("F", 3), ("Ab", 3), ("C", 4)],
+        [("C", 2), ("Bb", 2), ("E", 3), ("G", 3), ("Db", 4)],
+    ]
+    for b in range(bars):
+        ch = chords[b % 4] if b < bars - 1 else chords[0]
+        st = b * bar
+        hits = [(0.0, 1.0, 2.3 * beat), (2.5 * beat + swing, 0.55, 1.4 * beat)] if b < bars - 1 else [(0.0, 1.0, bar + 1.6)]
+        for off, vel, dur in hits:
+            tl = t_arr(dur)
+            trem = 0.5 + 0.5 * np.sin(2 * np.pi * 4.2 * tl)  # tremolo stereo
+            for k, (nm, oc) in enumerate(ch[1:]):  # la radice la fa il basso
+                sig = rhodes(hz(nm, oc), dur, vel * (0.9 - 0.08 * k))
+                add(sig * (0.55 + 0.45 * trem), st + off + 0.006 * k, 0.11, pan=-0.35, verb=0.35)
+                add(sig * (0.55 + 0.45 * (1 - trem)), st + off + 0.006 * k, 0.11, pan=0.35, verb=0.35)
+
+    # --- basso caldo (sinusoide + un po' di seconda armonica), radice e passaggio
+    for b in range(bars):
+        ch = chords[b % 4] if b < bars - 1 else chords[0]
+        root = hz(ch[0][0], 1)
+        notes = [(0.0, root, 1.9 * beat), (2.5 * beat + swing, root * 1.5, 0.9 * beat), (3.5 * beat + swing, root * 2 ** (10 / 12), 0.45 * beat)]
+        if b == bars - 1:
+            notes = [(0.0, root, bar + 1.2)]
+        for off, f, dur in notes:
+            tt = t_arr(dur)
+            sig = np.sin(2 * np.pi * f * tt) + 0.25 * np.sin(4 * np.pi * f * tt)
+            env = np.minimum(1, tt / 0.012) * np.exp(-tt * 0.9) * np.minimum(1, (dur - tt) / 0.05)
+            add(lowpass(sig * env, 320), b * bar + off, 0.42)
+
+    # --- batteria morbida
+    tk = t_arr(0.35)
+    kick = lowpass(np.sin(2 * np.pi * np.cumsum(50 + 60 * np.exp(-tk * 35)) / SR) * np.exp(-tk * 9), 400)
+    tr = t_arr(0.18)
+    rim = lowpass(highpass(rng.uniform(-1, 1, len(tr)), 1500), 6000) * np.exp(-tr * 38) * 0.6
+    rim += np.sin(2 * np.pi * 1700 * tr) * np.exp(-tr * 60) * 0.25
+    tsh = t_arr(0.09)
+    shaker = lowpass(highpass(rng.uniform(-1, 1, len(tsh)), 5000), 11000) * np.sin(np.pi * tsh / 0.09) ** 2
+    for b in range(bars - 1):
+        st = b * bar
+        add(kick, st, 0.75)
+        add(kick, st + 2.5 * beat + swing, 0.5)
+        add(rim, st + beat, 0.35, pan=0.1, verb=0.4)
+        add(rim, st + 3 * beat, 0.35, pan=0.1, verb=0.4)
+        for e in range(8):
+            off = e * beat / 2 + (swing if e % 2 else 0)
+            add(shaker, st + off, 0.07 if e % 2 else 0.045, pan=-0.3)
+
+    # --- transizioni soffici: swell di rumore filtrato + colpo sordo + campanella del Rhodes
+    tp = t_arr(1.2)
+    thump = lowpass(np.sin(2 * np.pi * 45 * tp) * np.exp(-tp * 4), 200)
+    for i, sb in enumerate(starts):
+        st = sb * bar
+        if i > 0:
+            rl = 1.5 * beat
+            ts = t_arr(rl)
+            sw = lowpass(rng.uniform(-1, 1, len(ts)), 2500) * (ts / rl) ** 3
+            add(sw, st - rl, 0.12, verb=0.5)
+            add(thump, st, 0.5)
+            add(rhodes(hz(chords[sb % 4][-1][0], 5), 1.5, 0.6), st, 0.05, pan=0.4, verb=0.8)
+    add(thump, end, 0.5)
+
+    # --- vinile: fruscio e crepitii
+    hiss = lowpass(rng.uniform(-1, 1, n), 4000) * 0.006
+    clicks = np.zeros(n)
+    for i in rng.integers(0, n, int(total * 6)):
+        clicks[i] = rng.uniform(0.1, 0.35) * rng.choice([-1, 1])
+    clicks = lowpass(clicks, 3000)
+    L += hiss + clicks * 0.25
+    R += np.roll(hiss, 997) + np.roll(clicks, 113) * 0.25
+
+    # --- riverbero (convoluzione con coda di rumore che decade, diverso per canale)
+    irn = int(1.6 * SR)
+    tir = np.arange(irn) / SR
+    irL = lowpass(rng.uniform(-1, 1, irn), 5000) * np.exp(-tir * 3.2)
+    irR = lowpass(rng.uniform(-1, 1, irn), 5000) * np.exp(-tir * 3.2)
+    L += fft_convolve(sendL, irL) * 0.012
+    R += fft_convolve(sendR, irR) * 0.012
+
+    # --- master morbido
+    fade = int(1.6 * SR)
+    L[-fade:] *= np.linspace(1, 0, fade) ** 1.3
+    R[-fade:] *= np.linspace(1, 0, fade) ** 1.3
+    st = np.stack([lowpass(L, 12000), lowpass(R, 12000)], axis=1)
+    st = np.tanh(st * 1.1)
+    st /= np.max(np.abs(st)) / 0.89
+    return st
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
-    ap.add_argument("--style", choices=["dubstep", "epic"], default="dubstep")
+    ap.add_argument("--style", choices=["lounge", "dubstep", "epic"], default="lounge")
     ap.add_argument("--sections", default="2,3,3,3,2", help="battute per scena (dubstep)")
     ap.add_argument("--bars", type=int, default=10, help="battute totali (epic)")
     ap.add_argument("--bpm", type=float, default=None)
     ap.add_argument("--seed", type=int, default=1)
     a = ap.parse_args()
-    if a.style == "dubstep":
+    if a.style == "lounge":
+        secs = [int(x) for x in a.sections.split(",")]
+        a.bpm = a.bpm or 105
+        st = render_lounge(secs, a.bpm, a.seed)
+        a.bars = sum(secs)
+    elif a.style == "dubstep":
         secs = [int(x) for x in a.sections.split(",")]
         a.bpm = a.bpm or 140
         st = render_dubstep(secs, a.bpm, a.seed)

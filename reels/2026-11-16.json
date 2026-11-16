@@ -47,7 +47,7 @@
      "wr": 50.7
     }
    ],
-   "bars": 3
+   "bars": 2
   },
   {
    "type": "movers",
@@ -81,7 +81,7 @@
      "delta": -1.4
     }
    ],
-   "bars": 3
+   "bars": 2
   },
   {
    "type": "event",
@@ -102,7 +102,7 @@
      "label": "Lv 3"
     }
    ],
-   "bars": 3
+   "bars": 2
   },
   {
    "type": "cta",
@@ -112,6 +112,6 @@
    "bars": 2
   }
  ],
- "style": "dubstep",
- "bpm": 140
+ "style": "lounge",
+ "bpm": 105
 }
