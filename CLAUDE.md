@@ -43,7 +43,7 @@ Passi della procedura:
 - Ogni news inoltrata diventa **una storia** per immagine. Se subito dopo l'inoltro l'utente scrive un messaggio con la parola **"post"**, si prepara anche un **post nel feed** (1080×1350, didascalia in italiano).
 - Script: `tools/news.py scan --work DIR` (scarica e genera storie/post + `manifest.json`), `render` (rigenera dopo aver cambiato il `kicker`: News, Spoiler, Event, Ban list…), `done --last-id ID` (avanza `news/state.json` dopo la pubblicazione).
 - File pubblicati in `posts/news/AAAA-MM-GG/`.
-- Attività **"News Discord GA.Hub"**: ogni giorno alle 17:43 prepara, notifica e, dopo l'ok, pubblica alle 20:00. Se non ci sono news nuove non fa nulla.
+- Attività **"News Discord GA.Hub"** (id `trig_012Xbhmx2WYtyFm18KjUHwbh`, procedura completa nel prompt): ogni giorno alle 17:43 prepara, notifica e, dopo l'ok, pubblica alle 20:00. Se non ci sono news nuove non fa nulla.
 
 ## Regole e preferenze dell'utente (da rispettare sempre)
 
