@@ -15,13 +15,14 @@ Due filoni, da tenere in conversazioni separate:
 | Template dell'app (fonte) | `app/app-template.html` (nell'artifact: `pipeline/app-template.txt`) |
 | Glossario delle parole chiave (dalle Comprehensive Rules) | `app/glossary.json` (nell'artifact: `pipeline/glossary.json`) |
 | Script dei dati, del sito e delle immagini social | `tools/pipeline.py`, che è la **versione di riferimento** (nell'artifact: `pipeline/pipeline.txt`) |
-| Script di pubblicazione su Instagram | `tools/publish_ig.py` |
+| Script di pubblicazione su Instagram | `tools/publish_ig.py` (post da 1 immagine o carosello, storie) |
+| Script delle news da Discord | `tools/news.py`, stato in `news/state.json` |
 | Storico dei post (slide, storie, didascalia) | `posts/AAAA-MM-GG/` |
 | Dati settimanali (bundle, archivio eventi, indice immagini) | solo nell'artifact: `data/bundle.json`, `data/events.json`, `pipeline/imgidx.json`, `cards/sNN.webp` |
 
 ### Attività programmata del lunedì
 - Si chiama **"Meta report Grand Archive"**, id `trig_01SGXDGwBhvQg9gmT5DWN7xU`.
-- Parte ogni lunedì alle 07:34 ora di Roma e apre ogni volta una sessione nuova.
+- Parte ogni lunedì alle 17:37 ora di Roma e apre ogni volta una sessione nuova. Dopo l'ok dell'utente, post e storie escono alle **20:00** (send_later nella stessa sessione); «pubblica subito» le pubblica immediatamente.
 - **La procedura completa sta nel prompt dell'attività.** Leggerlo con `get_trigger` e modificarlo con `update_trigger`. Va inviato il prompt intero, perché un prompt parziale lo sostituisce.
 - Se si cambia il flusso, aggiornare sia il prompt sia questo file.
 
@@ -33,7 +34,16 @@ Passi della procedura:
 5. `pipeline.py build` e ripubblica l'artifact.
 6. Carica slide e storie in `posts/<data>/` su main e fa i controlli (`publish_ig.py check` e `whoami`).
 7. Manda una notifica all'utente e **aspetta il suo ok**.
-8. Se l'utente risponde **«pubblica»**, usa `publish_ig.py publish`, che pubblica post e storie. Se risponde **«pubblica solo il post»**, esegue lo stesso comando senza storie.
+8. Se l'utente risponde **«pubblica»**, programma alle 20:00 `publish_ig.py publish`, che pubblica post e storie. Se risponde **«pubblica solo il post»**, lo stesso comando senza storie.
+
+### News da Discord → storie Instagram (ogni giorno)
+- L'utente **inoltra** nel canale **#news** (id `1571935765556891738`) del server Discord "Grand Archive TCG ITALIA" i messaggi del Discord ufficiale (spoiler, annunci, ecc.).
+- Il bot **GA.Hub News** legge il canale. Il token del bot è un segreto di rete dell'ambiente per `discord.com` (prefisso `Bot`), iniettato dal proxy: non chiederlo. Le immagini arrivano da `cdn.discordapp.com` / `media.discordapp.net`.
+- Contano **solo i messaggi dell'utente** (zefra115, id `402588692864040960`), elencati in `AUTHORS` in `tools/news.py`.
+- Ogni news inoltrata diventa **una storia** per immagine. Se subito dopo l'inoltro l'utente scrive un messaggio con la parola **"post"**, si prepara anche un **post nel feed** (1080×1350, didascalia in italiano).
+- Script: `tools/news.py scan --work DIR` (scarica e genera storie/post + `manifest.json`), `render` (rigenera dopo aver cambiato il `kicker`: News, Spoiler, Event, Ban list…), `done --last-id ID` (avanza `news/state.json` dopo la pubblicazione).
+- File pubblicati in `posts/news/AAAA-MM-GG/`.
+- Attività **"News Discord GA.Hub"**: ogni giorno alle 17:43 prepara, notifica e, dopo l'ok, pubblica alle 20:00. Se non ci sono news nuove non fa nulla.
 
 ## Regole e preferenze dell'utente (da rispettare sempre)
 

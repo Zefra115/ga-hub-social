@@ -11,8 +11,8 @@ richieste verso l'host dell'API. Qui si manda un valore fittizio.
 Comandi:
   check   --urls U1 ... U5 --caption FILE   controlli prima della pubblicazione (nessun effetto)
   whoami                                      verifica che il token funzioni (username dell'account)
-  publish --urls U1 ... U5 --caption FILE [--story-urls S1 S2]
-                                              pubblica il carosello e poi le storie (IRREVERSIBILE)
+  publish --urls U1 [... U10] --caption FILE [--story-urls S1 S2]
+                                              pubblica il post (1 immagine o carosello) e poi le storie (IRREVERSIBILE)
   stories --story-urls S1 S2                  pubblica solo le storie (IRREVERSIBILE)
 """
 import argparse, json, sys, time, urllib.parse, urllib.request, urllib.error
@@ -55,8 +55,8 @@ def whoami():
 
 def check(urls, caption, story_urls=()):
     probs = []
-    if urls and not 2 <= len(urls) <= 10:
-        probs.append(f"un carosello vuole 2–10 immagini, qui {len(urls)}")
+    if urls and not 1 <= len(urls) <= 10:
+        probs.append(f"un post vuole 1 immagine o un carosello di 2–10, qui {len(urls)}")
     for u in list(urls) + list(story_urls):
         try:
             req = urllib.request.Request(u, method="HEAD", headers={"User-Agent": "gahub-meta-report/1.0"})
@@ -95,6 +95,12 @@ def wait_ready(cid, tries=30):
 def publish(urls, caption):
     me = whoami()
     uid = me["user_id"]
+    if len(urls) == 1:  # post con una sola immagine
+        c = call("POST", f"{uid}/media", {"image_url": urls[0], "caption": caption})
+        wait_ready(c["id"])
+        pub = call("POST", f"{uid}/media_publish", {"creation_id": c["id"]})
+        info = call("GET", pub["id"], {"fields": "permalink,timestamp"})
+        return {"media_id": pub["id"], **info}
     children = []
     for u in urls:
         c = call("POST", f"{uid}/media", {"image_url": u, "is_carousel_item": "true"})
