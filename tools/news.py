@@ -317,6 +317,17 @@ def _frame(P, W, H, src, kicker, source, area_top, area_bot):
     return im
 
 
+def _tight(card, thr=70, frac=0.6):
+    """Toglie bordi scuri e sfondo attorno alla carta: tiene righe/colonne in cui la maggior parte dei pixel non è scura."""
+    import numpy as np
+    m = np.asarray(card.convert("RGB")).max(axis=2) > thr
+    cols = np.where(m.mean(axis=0) > frac)[0]
+    rows = np.where(m.mean(axis=1) > frac)[0]
+    if len(cols) < card.width * 0.5 or len(rows) < card.height * 0.5:
+        return card
+    return card.crop((int(cols[0]), int(rows[0]), int(cols[-1]) + 1, int(rows[-1]) + 1))
+
+
 def _cards(P, W, H, src, boxes, label, emo, subtitle, source, pad=0.0):
     """Carte grandi e leggibili (1 al centro; 2 affiancate; 3-4 su due righe), artwork della prima carta
     sfocato dietro, titolo con emoji (es. 🔥 SPOILER ALERT 🔥, 🚫 BAN LIST 🚫)."""
@@ -324,8 +335,8 @@ def _cards(P, W, H, src, boxes, label, emo, subtitle, source, pad=0.0):
     story = H > 1500
     from PIL import ImageOps
     cards = [src.crop(b) for b in boxes]
-    if pad:  # bordo nero aggiunto: per carte tagliate dal bordo dell'immagine o testo vicino al bordo
-        cards = [ImageOps.expand(c, border=max(2, int(c.width * pad)), fill=(14, 14, 16)) for c in cards]
+    if pad:  # carta ritagliata stretta sulla cornice colorata + bordo nero uniforme su tutti i lati
+        cards = [ImageOps.expand(_tight(c), border=max(2, int(c.width * pad)), fill=(14, 14, 16)) for c in cards]
     cw, ch = cards[0].size
     art = cards[0].crop((int(cw * .06), int(ch * .09), int(cw * .94), int(ch * .58)))  # illustrazione della carta
     im = _cover(art, W, H, 22, 0.62)
