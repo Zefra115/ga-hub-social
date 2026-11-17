@@ -1,0 +1,112 @@
+{
+ "scanned_at": "2026-11-17T17:37:15",
+ "prev_last_id": "1572270043381760062",
+ "last_id": "1572304432799031327",
+ "items": [
+  {
+   "id": "1572304175155511390",
+   "forwarded_at": "2026-11-17T17:35:27.356000+00:00",
+   "original_at": "2026-11-17T17:35:27.356000+00:00",
+   "source": "Discord",
+   "text": "",
+   "post": false,
+   "kicker": "Spoiler",
+   "images": [
+    "1572304175155511390-1-src.png"
+   ],
+   "stories": [
+    "1572304175155511390-1-story.jpg"
+   ],
+   "posts": [],
+   "subtitle": ".asphodel/cantabile",
+   "card_boxes": {
+    "1": [
+     0.348,
+     0.044,
+     0.652,
+     0.958
+    ]
+   },
+   "found_cards": {
+    "1": [
+     [
+      889,
+      51,
+      1666,
+      1129
+     ]
+    ]
+   }
+  },
+  {
+   "id": "1572304359566479390",
+   "forwarded_at": "2026-11-17T17:36:11.323000+00:00",
+   "original_at": "2026-11-17T17:36:11.323000+00:00",
+   "source": "Discord",
+   "text": "",
+   "post": false,
+   "kicker": "Spoiler",
+   "images": [
+    "1572304359566479390-1-src.png"
+   ],
+   "stories": [
+    "1572304359566479390-1-story.jpg"
+   ],
+   "posts": [],
+   "subtitle": ".asphodel/cantabile",
+   "card_boxes": {
+    "1": [
+     0.347,
+     0.041,
+     0.651,
+     0.951
+    ]
+   },
+   "found_cards": {
+    "1": [
+     [
+      886,
+      48,
+      1663,
+      1121
+     ]
+    ]
+   }
+  },
+  {
+   "id": "1572304432799031327",
+   "forwarded_at": "2026-11-17T17:36:28.783000+00:00",
+   "original_at": "2026-11-17T17:36:28.783000+00:00",
+   "source": "Discord",
+   "text": "",
+   "post": false,
+   "kicker": "Spoiler",
+   "images": [
+    "1572304432799031327-1-src.png"
+   ],
+   "stories": [
+    "1572304432799031327-1-story.jpg"
+   ],
+   "posts": [],
+   "subtitle": ".asphodel/cantabile",
+   "card_boxes": {
+    "1": [
+     0.349,
+     0.046,
+     0.651,
+     0.955
+    ]
+   },
+   "found_cards": {
+    "1": [
+     [
+      892,
+      54,
+      1663,
+      1125
+     ]
+    ]
+   }
+  }
+ ]
+}
