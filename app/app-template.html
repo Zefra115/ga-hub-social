@@ -79,7 +79,7 @@ main{padding-block:22px 64px}
   .topbar select{flex:1;min-width:0}
   .pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .strip{top:0}
-  .tabbar{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--surface);border-top:1px solid var(--line);padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
+  .tabbar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--surface);border-top:1px solid var(--line);padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
   .tabbar button{display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;color:var(--muted);font:500 10.5px var(--f-body);padding:4px 0;border-radius:8px;cursor:pointer;min-width:0}
   .tabbar button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
   .tabbar button[aria-selected="true"]{color:var(--accent);background:var(--accent-soft)}
@@ -195,6 +195,15 @@ details[open]>summary::before{transform:rotate(90deg)}
 .h-good{background:var(--good-soft);color:var(--good)} .h-bad{background:var(--bad-soft);color:var(--bad)} .h-mid{background:var(--sunk);color:var(--muted)}
 .faded{opacity:.5}
 .decklist{font-family:var(--f-mono);font-size:12px;white-space:pre-wrap;background:var(--sunk);border-radius:var(--r-sm);padding:12px;margin:0;max-height:340px;overflow:auto}
+.lab-log{display:flex;flex-direction:column;gap:10px;max-height:72vh;overflow:auto;padding-right:2px}
+.lab-q{align-self:flex-end;background:var(--sunk);border:1px solid var(--line);border-radius:12px 12px 4px 12px;padding:8px 12px;max-width:88%;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
+.lab-diff{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.lab-name{display:inline-flex;align-items:flex-start;gap:6px}
+.lab-name .dot{flex:none;margin:5px 0 0}
+.lab-tag{font-size:14px;cursor:help}
+#labRows td{padding-left:6px;padding-right:6px}
+.lab-alt{padding:2px 7px;font-size:13px;line-height:1}
 .hero-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--line-strong);border-radius:var(--r)}
 .callout{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:var(--r-sm);background:var(--gold-soft);color:var(--fg);font-size:13px}
 .callout svg{flex:none;color:var(--gold);margin-top:2px}
@@ -277,9 +286,10 @@ const IC={
  meta:'<circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M10 3.5v6.5l4.5 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>',
  report:'<path d="M5 3h7l3 3v11H5z" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/><path d="M8 10l1.5 1.5L12.5 8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
  regole:'<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H16v12H5.5A1.5 1.5 0 0 0 4 16.5zM4 16.5A1.5 1.5 0 0 0 5.5 18H16" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round"/>',
+ lab:'<path d="M8 3h4M8.5 3v5L4.4 15.3A1.2 1.2 0 0 0 5.5 17h9a1.2 1.2 0 0 0 1.1-1.7L11.5 8V3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linejoin="round" stroke-linecap="round"/><path d="M6.4 12.5h7.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
  spark:'<path d="M10 2l1.8 4.6L16.5 8l-4.7 1.6L10 14l-1.8-4.4L3.5 8l4.7-1.4z" fill="currentColor"/>'};
 const svg=(k,s=20)=>`<svg width="${s}" height="${s}" viewBox="0 0 20 20" aria-hidden="true">${IC[k]}</svg>`;
-const TABS=[["lista","Lista"],["analisi","Analisi"],["matchup","Matchup"],["meta","Meta"],["report","Report"],["regole","Regole"]];
+const TABS=[["lista","Lista"],["lab","Lab"],["analisi","Analisi"],["matchup","Matchup"],["meta","Meta"],["report","Report"],["regole","Regole"]];
 
 /* ---------- database carte ---------- */
 const LOWER=new Map();
@@ -337,7 +347,7 @@ let S;
 function load(){try{const raw=localStorage.getItem("gadl.v2");if(raw)S=JSON.parse(raw)}catch(e){}
   if(!S||!S.decks){const d=exampleDeck();S={decks:{[d.id]:d},current:d.id,win:DATA.win?.d30?"d30":"season",metaVer:0,meta:null,settings:structuredClone(DEFAULT_SETTINGS),tab:"lista",sel:null}}
   fix()}
-function fix(){if(!S.meta)S.meta=[];if(!S.win)S.win=DATA.win?.d30?"d30":"season";if(S.metaVer!==4){S.meta=defaultMeta();S.metaVer=4}S.settings=Object.assign(structuredClone(DEFAULT_SETTINGS),S.settings||{});S.settings.targets=Object.assign({},DEFAULT_SETTINGS.targets,S.settings.targets||{});if(!S.meta)S.meta=defaultMeta();if(!S.decks[S.current])S.current=Object.keys(S.decks)[0];if(!TABS.some(t=>t[0]===S.tab))S.tab="lista"}
+function fix(){if(!S.meta)S.meta=[];if(!S.labDraft)S.labDraft={idea:"",champ:"",must:"",avoid:"",level:"regional"};if(!S.win)S.win=DATA.win?.d30?"d30":"season";if(S.metaVer!==4){S.meta=defaultMeta();S.metaVer=4}S.settings=Object.assign(structuredClone(DEFAULT_SETTINGS),S.settings||{});S.settings.targets=Object.assign({},DEFAULT_SETTINGS.targets,S.settings.targets||{});if(!S.meta)S.meta=defaultMeta();if(!S.decks[S.current])S.current=Object.keys(S.decks)[0];if(!TABS.some(t=>t[0]===S.tab))S.tab="lista"}
 let saveT;const save=()=>{clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem("gadl.v2",JSON.stringify(S))}catch(e){}},250)};
 const deck=()=>S.decks[S.current];
 function mu(id){const d=deck();if(!d.matchups[id])d.matchups[id]={manual:null,games:[],plan:{in:"",out:"",notes:""}};return d.matchups[id]}
@@ -484,11 +494,20 @@ const AI_TOOLS=status=>[
  {name:"cerca_carta",description:"Restituisce testo ufficiale completo, tipo, elemento, costi, statistiche, legalità, definizioni delle parole chiave e in quali archetipi è giocata (con %) per una carta. Accetta il nome anche approssimato.",inputSchema:{type:"object",properties:{nome:{type:"string"}},required:["nome"]},
   execute:({nome})=>{const n=String(nome||"");const c=card(n)||card(closest(n)||"");status(`legge ${c?c.name:n}`);if(!c)throw new Error("Carta non trovata nell'Index: "+n);
    return{nome:c.name,tipo:c.types,sottotipi:c.sub,classi:c.cls,elementi:c.el,reserve:c.res,memory:c.mem,livello:c.lvl,power:c.pow,life:c.life,durability:c.dur,speed:c.speed,legalita:c.limit===0?"BANDITA in Standard":c.limit>0?`limitata a ${c.limit}`:"legale",testo:c.fx,parole_chiave:kwDefs(c).map(g=>({nome:g[0],definizione:short(g[2],500)})),giocata_in:c.use.map(u=>`${u[0]} (${ZONE_IT[u[1]]}, ${u[2]}% delle liste, ${u[3]}×)`)}}},
- {name:"cerca_testo",description:"Cerca nel nome e nel testo di tutte le carte (es. 'negate', 'draw two cards', 'banish target ally'). Filtri opzionali: elemento (FIRE, WATER, WIND, NORM o avanzato), tipo (ACTION, ALLY, ATTACK, ITEM, REGALIA...), costo_max. Restituisce fino a 20 carte legali con un estratto.",inputSchema:{type:"object",properties:{testo:{type:"string"},elemento:{type:"string"},tipo:{type:"string"},costo_max:{type:"number"}},required:["testo"]},
-  execute:({testo,elemento,tipo,costo_max})=>{const q=String(testo||"").toLowerCase();status(`cerca “${q}”`);const el=elemento?String(elemento).toUpperCase():null,ty=tipo?String(tipo).toUpperCase():null;const out=[];
-   for(const c of LOWER.values()){if(c.limit===0||/TOKEN/.test(c.types))continue;if(!(c.fx.toLowerCase().includes(q)||c.name.toLowerCase().includes(q)))continue;if(el&&!elsOf(c).includes(el))continue;if(ty&&!c.types.includes(ty))continue;const v=costOf(c);if(costo_max!=null&&v!=null&&v>+costo_max)continue;
-    out.push({nome:c.name,tipo:c.types,elementi:c.el,costo:c.res!=null?`reserve ${c.res}`:c.mem!=null?`memory ${c.mem}`:null,giocata_in:c.use.slice(0,3).map(u=>`${u[0]} ${u[2]}%`),estratto:short(c.fx.replace(/\s+/g," "),220)});if(out.length>=20)break}
+ {name:"cerca_testo",description:"Cerca nel nome e nel testo di tutte le carte (es. 'negate', 'draw two cards', 'banish target ally'). Più termini separati da ' + ' devono comparire tutti (es. 'ally + draw'). Filtri opzionali: elemento (FIRE, WATER, WIND, NORM o avanzato), tipo (ACTION, ALLY, ATTACK, ITEM, REGALIA...), classe (WARRIOR, MAGE, CLERIC, GUARDIAN, RANGER, ASSASSIN, TAMER...), costo_max, solo_non_giocate (true = solo carte che non compaiono nelle liste di consenso: le carte nascoste). Restituisce fino a 25 carte legali con un estratto e in quali archetipi sono giocate.",inputSchema:{type:"object",properties:{testo:{type:"string"},elemento:{type:"string"},tipo:{type:"string"},classe:{type:"string"},costo_max:{type:"number"},solo_non_giocate:{type:"boolean"}},required:["testo"]},
+  execute:({testo,elemento,tipo,classe,costo_max,solo_non_giocate})=>{const terms=String(testo||"").toLowerCase().split(/\s+\+\s+/).map(x=>x.trim()).filter(Boolean);status(`cerca “${terms.join(" + ")}”${solo_non_giocate?" (fuori dal meta)":""}`);const el=elemento?String(elemento).toUpperCase():null,ty=tipo?String(tipo).toUpperCase():null,cl=classe?String(classe).toUpperCase():null;const out=[];
+   for(const c of LOWER.values()){if(c.limit===0||/TOKEN/.test(c.types))continue;const hay=(c.name+"\n"+c.fx).toLowerCase();if(!terms.every(t=>hay.includes(t)))continue;if(el&&!elsOf(c).includes(el))continue;if(ty&&!c.types.includes(ty))continue;if(cl&&!c.cls.toUpperCase().includes(cl))continue;if(solo_non_giocate&&c.use.length)continue;const v=costOf(c);if(costo_max!=null&&v!=null&&v>+costo_max)continue;
+    out.push({nome:c.name,tipo:c.types,elementi:c.el,classe:c.cls||"—",costo:c.res!=null?`reserve ${c.res}`:c.mem!=null?`memory ${c.mem}`:null,giocata_in:c.use.length?c.use.slice(0,3).map(u=>`${u[0]} ${u[2]}%`):"fuori dal meta",estratto:short(c.fx.replace(/\s+/g," "),220)});if(out.length>=25)break}
    return out.length?out:"Nessuna carta trovata"}},
+ {name:"champion",description:"Cerca champion per nome, elemento o classe. Restituisce livello, elementi, classe, life, da quale champion deve salire (Lineage), testo e in quali archetipi è giocato. Usalo per scegliere champion e percorso di level up (Spirit Lv0 → Lv1 → Lv2 → Lv3).",inputSchema:{type:"object",properties:{nome:{type:"string"},elemento:{type:"string"},classe:{type:"string"}}},
+  execute:({nome,elemento,classe})=>{const q=String(nome||"").toLowerCase().trim(),el=elemento?String(elemento).toUpperCase():null,cl=classe?String(classe).toUpperCase():null;status(`champion ${nome||elemento||classe||""}`.trim());const out=[];
+   for(const c of LOWER.values()){if(!isChamp(c)||c.limit===0)continue;if(q&&!c.name.toLowerCase().includes(q))continue;if(el&&!elsOf(c).includes(el))continue;if(cl&&!c.cls.toUpperCase().includes(cl))continue;out.push(c)}
+   if(!out.length)throw new Error("Nessun champion trovato");out.sort((a,b)=>(b.use.length-a.use.length)||((a.lvl??0)-(b.lvl??0)));
+   return out.slice(0,q?10:30).map(c=>({nome:c.name,livello:c.lvl,elementi:c.el,classe:c.cls||"—",life:c.life,costo_memory:c.mem,sale_da:lineageReq(c)||"qualsiasi champion del livello precedente",testo:q?c.fx:short(c.fx.replace(/\s+/g," "),260),giocato_in:c.use.length?c.use.slice(0,4).map(u=>`${u[0]} ${u[2]}%`):"fuori dal meta"}))}},
+ {name:"valida_lista",description:"Controlla una lista completa (sezioni '# Material Deck', '# Main Deck', '# Sideboard', righe 'N Nome carta') con lo stesso controllo di legalità dell'app: main ≥60, max 4 copie, material deck ≤12 con Spirit Lv0 e percorso di level up, elementi abilitati, Class/Level Locked, una Divine Relic, sideboard 15 carte/15 punti, ban list. Restituisce errori, avvisi, conteggi, mano iniziale, curva di costo del main e quante carte sono collaudate, poco giocate o fuori dal meta. Usalo SEMPRE prima di consegnare una lista.",inputSchema:{type:"object",properties:{lista:{type:"string"}},required:["lista"]},
+  execute:({lista})=>{status("controlla la lista");const {L,bad,warn}=labCheck(String(lista||""));const curve={};L.main.forEach(c=>{const v=costOf(card(c.name));const k=v==null?"senza costo":v>=5?"5+":String(v);curve[k]=(curve[k]||0)+c.qty});
+   const tags={collaudate:0,poco_giocate:0,fuori_dal_meta:0};L.main.forEach(c=>{const t=labTag(c.name);if(t)tags[t.key]+=c.qty});
+   return{legale:!bad.length,errori:bad.map(r=>`${r.t}: ${r.p}`),avvisi:warn.map(r=>`${r.t}: ${r.p}`),material:sum(L.material),main:sum(L.main),sideboard:sum(L.side),mano_iniziale:handSize(L),curva_main:curve,etichette_main:tags}}},
  {name:"archetipo",description:"Dati di un archetipo del meta: champion, quota, win rate, lista di consenso (main, sideboard, material con %), head-to-head contro l'archetipo del giocatore e lista vincente più recente.",inputSchema:{type:"object",properties:{nome:{type:"string"}},required:["nome"]},
   execute:({nome})=>{const n=COLS.find(x=>x.toLowerCase()===String(nome).toLowerCase())||COLS.find(x=>x.toLowerCase().includes(String(nome).toLowerCase()));status(`studia ${n||nome}`);if(!n)throw new Error("Archetipo non trovato. Disponibili: "+COLS.join(", "));
    const m=META[n],c=DATA.cons[n],d=deck(),v=d.arch?mxVal(d.arch,n):null;return{archetipo:n,champion:m.ch.slice(0,3),tier:m.tier,quota:m.share+"%",win_rate:m.wr+"%",win_rate_corretto_elo:m.adj+"%",liste:m.decks,
@@ -501,7 +520,7 @@ let toolsOK=null;async function canTools(sample){if(toolsOK!==null)return toolsO
 async function runAI(btn,out,prompt,opts={}){const sample=await getSample();
   if(!sample){out.hidden=false;out.innerHTML=`<p class="muted" style="margin:0">L'analisi con Claude non è disponibile in questa vista. I controlli locali restano attivi.</p>`;return null}
   btn.disabled=true;out.hidden=false;const steps=[];let txt="";
-  const paint=()=>{out.innerHTML=(txt?md(txt):`<div class="thinking"><i></i>Claude sta ragionando… (fino a un paio di minuti)</div>`)+(steps.length?`<p class="src" style="margin-top:8px">Verifiche: ${steps.slice(-8).map(esc).join(" · ")}${steps.length>8?` · (+${steps.length-8})`:""}</p>`:"")};paint();
+  const view=opts.view||md;const paint=()=>{out.innerHTML=(txt?view(txt):`<div class="thinking"><i></i>Claude sta ragionando… (fino a un paio di minuti)</div>`)+(steps.length?`<p class="src" style="margin-top:8px">Verifiche: ${steps.slice(-8).map(esc).join(" · ")}${steps.length>8?` · (+${steps.length-8})`:""}</p>`:"")};paint();
   const ctl=new AbortController();const stop=document.createElement("button");stop.className="btn sm";stop.type="button";stop.textContent="Ferma";stop.onclick=()=>ctl.abort();btn.after(stop);
   const useTools=await canTools(sample);const o={signal:ctl.signal,modelTier:"complex"};
   if(useTools){o.tools=AI_TOOLS(s=>{steps.push(s);paint()})}else o.cache=false;
@@ -512,6 +531,90 @@ async function runAI(btn,out,prompt,opts={}){const sample=await getSample();
     if(e?.code==="tools_unavailable"){toolsOK=false;btn.disabled=false;stop.remove();return runAI(btn,out,prompt,opts)}
     out.innerHTML=(e?.text?md(e.text):"")+`<p class="muted">${esc(errMsg(e))}</p>`;return null}
   finally{btn.disabled=false;stop.remove()}}
+
+/* ---------- Laboratorio: dall'idea alla lista ---------- */
+function labTag(n){const c=card(n);if(!c)return null;const u=c.use.slice().sort((a,b)=>b[2]-a[2]);const m=u.length?+u[0][2]||0:0;
+  if(m>=30)return{key:"collaudate",cls:"good",i:"🟢",t:"collaudata",tip:`Nel ${Math.round(m)}% delle liste di ${u[0][0]}`};
+  if(m>0)return{key:"poco_giocate",cls:"warn",i:"🟡",t:"da provare",tip:`Al massimo nel ${Math.round(m)}% delle liste (${u[0][0]})`};
+  return{key:"fuori_dal_meta",cls:"acc",i:"💎",t:"fuori dal meta",tip:"Non compare nelle liste di consenso di nessun archetipo"}}
+function labCheck(text){const L=parseList(text);const R=legality(L);return{L,R,bad:R.filter(r=>!r.ok&&r.lvl==="bad"),warn:R.filter(r=>!r.ok&&r.lvl!=="bad")}}
+function labExtract(t){t=String(t||"");const blocks=[...t.matchAll(/```[a-z]*[ \t]*\n([\s\S]*?)```/gi)].map(x=>x[1]).filter(x=>/^\s*#+\s*main/im.test(x));
+  const nm=(t.match(/^\s*\**NOME\**:\s*(.+)$/mi)||[])[1];
+  let body=t.replace(/```[a-z]*[ \t]*\n[\s\S]*?```/gi,"").replace(/```[\s\S]*$/,"").replace(/^\s*\**NOME\**:.*$/mi,"").trim();
+  return{list:blocks.length?blocks[blocks.length-1].trim():null,name:nm?nm.replace(/[*_`#]/g,"").trim().slice(0,40):"",body}}
+function listDiff(a,b){const A=parseList(a),B=parseList(b),out=[];
+  for(const z of ["material","main","side"]){const m=new Map(A[z].map(c=>[c.name,c.qty])),n=new Map(B[z].map(c=>[c.name,c.qty]));
+    for(const [k,q] of n){const d=q-(m.get(k)||0);if(d)out.push({z,n:k,d})}for(const [k,q] of m)if(!n.has(k))out.push({z,n:k,d:-q})}
+  return out.sort((x,y)=>y.d-x.d)}
+function labMeta(){const rows=COLS.map(n=>({n,s:mstat(n)})).filter(x=>x.s&&x.s.share>0).sort((a,b)=>b.s.share-a.s.share).slice(0,20);
+  return`META ATTUALE (${WIN_LAB[curWin()]}, stagione ${DATA.snap.season}, dati al ${DATA.snap.date}; archetipo · champion · quota del field · win rate · liste):\n`+rows.map(x=>`- ${x.n} · ${champOf(x.n)} · ${x.s.share}% · WR ${x.s.wr}% · ${x.s.decks} liste`).join("\n")
+   +`\n\nCHAMPION PIÙ GIOCATI NELLA STAGIONE: ${DATA.champs.slice(0,14).map(c=>`${c.name} (${c.cls}, ${c.decks} liste, WR ${c.wr}%)`).join("; ")}`}
+const LAB_RULES=`MODALITÀ LABORATORIO. Il giocatore ti dà un'idea di mazzo: costruisci UNA lista solida e legale, poi la migliorate insieme un passo alla volta.
+Come lavorare:
+1. Interpreta l'idea: piano di gioco e condizione di vittoria. Se è vaga, scegli l'interpretazione più forte e dichiarala in una riga.
+2. Scegli champion e percorso di level up con lo strumento champion (rispetta Lineage e livelli N→N+1).
+3. Confronta l'idea con gli archetipi esistenti (strumento archetipo). Se uno è vicino, parti dalla sua ossatura collaudata. Cita solo numeri presi dai dati.
+4. Cerca sinergie in tutto il database con cerca_testo, anche con solo_non_giocate:true per scovare carte che nessuno gioca. Verifica OGNI candidata con cerca_carta (elemento abilitato, costo, testo) prima di inserirla.
+5. La lista deve essere SOLIDA: ossatura di carte collaudate; al massimo circa 4–10 carte poco giocate o fuori dal meta, solo se rafforzano davvero la sinergia, ognuna motivata.
+6. Prima di rispondere controlla la lista con valida_lista e correggila finché non ha errori. Main di 60 carte salvo motivi precisi.
+7. In Grand Archive il mulligan non esiste: non citarlo mai.`;
+const LAB_FORMAT_NEW=`FORMATO DELLA RISPOSTA (obbligatorio, in italiano, nomi delle carte in inglese esatti):
+NOME: <nome breve del mazzo, massimo 4 parole>
+\`\`\`lista
+# Material Deck
+1 <carta>
+# Main Deck
+4 <carta>
+# Sideboard
+2 <carta>
+\`\`\`
+### L'idea in pratica
+(piano di gioco, champion e percorso di level up: 3–5 righe)
+### Da dove parte
+(archetipi o liste vincenti a cui ti sei ispirato, con i numeri dei dati)
+### Le scelte chiave
+(per ruolo; una riga di motivo per le scelte non ovvie)
+### Carte nascoste
+(le carte poco giocate o fuori dal meta che hai scelto e perché funzionano qui; se non ce ne sono, dillo)
+### Punti deboli
+(contro quali archetipi più giocati soffre e cosa provare per primo)
+Massimo circa 450 parole fuori dalla lista.`;
+const LAB_FORMAT_EDIT=`REGOLE PER QUESTA RISPOSTA:
+- Lavoriamo passo passo: cambia solo ciò che il giocatore chiede, più al massimo 1–2 aggiustamenti necessari per restare legale.
+- Se modifichi la lista: scrivi prima le righe “−N Carta / +N Carta — motivo”, controlla con valida_lista e poi restituisci il blocco \`\`\`lista COMPLETO (material, main, sideboard) nello stesso formato.
+- Se il giocatore chiede alternative, opinioni, spiegazioni o dice di non applicare: rispondi senza il blocco \`\`\`lista.
+- Massimo circa 300 parole.`;
+const LAB_QUICK=[["Più costante","Rendi la lista più costante: meno carte a una copia e curva più pulita. Massimo 4 slot."],["Contro il meta top","Migliora i matchup contro i 3 archetipi più giocati del periodo. Massimo 4 slot tra main e sideboard."],["Carte nascoste","Cerca 2–3 carte fuori dal meta o poco giocate che potrebbero rafforzare la sinergia. Proponile con il motivo ma NON applicarle alla lista."],["Sideboard","Rivedi la sideboard per il meta attuale (15 carte, 15 punti) e dimmi cosa entra contro i 4 archetipi più giocati."],["Come si gioca","Spiegami come si gioca questa lista: primi turni, level up, quando attaccare, errori da evitare. Non modificare la lista."]];
+const labTrim=m=>{if(m.length<=9)return m;const tail=m.slice(-5);while(tail.length&&tail[0].role!=="user")tail.shift();return[m[0],m[1],...tail]};
+let labBusy=false;
+async function labRun(btn,out,msgs,needList){
+  const view=t=>{const x=labExtract(t);return md(x.body||"…")+(x.list?`<p class="src">✓ Lista ricevuta: la controllo.</p>`:"")};
+  const txt=await runAI(btn,out,labTrim(msgs),{view});if(!txt)return null;
+  let x=labExtract(txt);msgs=[...msgs,{role:"assistant",content:txt}];
+  if(!x.list){if(needList){out.insertAdjacentHTML("beforeend",`<p class="muted">Claude non ha restituito la lista completa. Riprova o riformula l'idea.</p>`);return null}return{...x,msgs,err:[]}}
+  let chk=labCheck(x.list);
+  if(chk.bad.length){const fix=`Il controllo automatico dell'app ha trovato questi errori nella lista:\n${chk.bad.map(r=>`- ${r.t}: ${r.p}`).join("\n")}\n\nCorreggili con il minimo di modifiche, verifica con valida_lista e restituisci NOME, il blocco \`\`\`lista completo e una riga per ogni correzione.`;
+    const m2=[...msgs,{role:"user",content:fix}];const t2=await runAI(btn,out,labTrim(m2),{view});
+    if(t2){const y=labExtract(t2);if(y.list){msgs=[...m2,{role:"assistant",content:t2}];x={list:y.list,name:y.name||x.name,body:x.body+"\n\n### Correzioni dopo il controllo\n"+y.body};chk=labCheck(y.list)}}}
+  return{...x,msgs,err:chk.bad.map(r=>`${r.t}: ${r.p}`)}}
+async function labCreate(){if(labBusy)return;const D=S.labDraft;if(!D.idea.trim()){toast("Scrivi prima l'idea");$("#lab_idea").focus();return}
+  const u0=`${PREAMBLE}\n\n${LAB_RULES}\n\n${labMeta()}\n\nIDEA DEL GIOCATORE:\n${D.idea.trim()}${D.champ.trim()?`\n\nChampion desiderato: ${D.champ.trim()}`:""}${D.must.trim()?`\nCarte da includere: ${D.must.trim()}`:""}${D.avoid.trim()?`\nCarte da evitare: ${D.avoid.trim()}`:""}\nObiettivo: ${D.level==="local"?"torneo locale (field vario)":"Regional o evento grande (field vicino al meta)"}\n\n${LAB_FORMAT_NEW}`;
+  labBusy=true;let res;try{res=await labRun($("#labGo"),$("#labOut"),[{role:"user",content:u0}],true)}finally{labBusy=false}if(!res)return;
+  const d=freshDeck("Lab · "+(res.name||"Nuova idea"),res.list,"");const det=detectArch(parseList(res.list));if(det)d.arch=det.n;
+  d.lab={idea:D.idea.trim(),champ:D.champ.trim(),must:D.must.trim(),avoid:D.avoid.trim(),level:D.level,msgs:res.msgs,log:[{q:"Idea: "+D.idea.trim(),a:res.body,diff:[],err:res.err,at:Date.now()}]};
+  S.decks[d.id]=d;S.current=d.id;S.labNew=false;S.labDraft={idea:"",champ:"",must:"",avoid:"",level:D.level};S.tab="lab";save();render();window.scrollTo({top:0});toast("Lista creata: "+d.name)}
+async function labSend(q,disp){const d=deck();if(!d.lab||labBusy)return;const log=$("#labLog");
+  log.insertAdjacentHTML("beforeend",`<div class="lab-q">${esc(disp||q)}</div><div class="ai" id="labPending"></div>`);const out=$("#labPending");out.scrollIntoView({block:"nearest",behavior:"smooth"});
+  const chk=labCheck(d.text);
+  const u=`LISTA ATTUALE (il giocatore può averla modificata a mano):\n\`\`\`lista\n${d.text.trim()}\n\`\`\`\nControllo dell'app: ${chk.bad.length?chk.bad.map(r=>`${r.t}: ${r.p}`).join("; "):"lista legale"}.\nPeriodo dei dati: ${WIN_LAB[curWin()]}.\n\nRICHIESTA DEL GIOCATORE: ${q}\n\n${LAB_FORMAT_EDIT}`;
+  labBusy=true;$("#labQ")&&($("#labQ").value="");let res;try{res=await labRun($("#labSend"),out,[...d.lab.msgs,{role:"user",content:u}],false)}finally{labBusy=false}
+  out.removeAttribute("id");if(!res)return;
+  let diff=[];if(res.list){diff=listDiff(d.text,res.list);if(diff.length){d.lab.undo=d.text;d.text=res.list;d.updated=Date.now();if(!d.arch){const det=detectArch(parseList(res.list));if(det)d.arch=det.n}}}
+  d.lab.msgs=res.msgs;d.lab.log.push({q:disp||q,a:res.body,diff,err:res.list?res.err:[],at:Date.now()});save();render();
+  const L2=$("#labLog");if(L2){L2.scrollTop=L2.scrollHeight;L2.lastElementChild?.previousElementSibling?.scrollIntoView({block:"start",behavior:"smooth"})}}
+const labDecksHTML=cur=>{const ls=Object.values(S.decks).filter(x=>x.lab).sort((a,b)=>b.updated-a.updated);return ls.length?`<div class="row" style="gap:6px">${ls.map(x=>`<button type="button" class="btn sm ${x.id===cur?"primary":""}" data-lab-open="${x.id}">${esc(x.name)}</button>`).join("")}</div>`:""};
+const labLogHTML=d=>d.lab.log.map(e=>`<div class="lab-q">${esc(e.q)}</div><div class="ai">${e.diff?.length?`<div class="lab-diff">${e.diff.map(x=>`<span class="pill ${x.d>0?"good":"bad"}">${x.d>0?"+":"−"}${Math.abs(x.d)} ${esc(x.n)}${x.z!=="main"?` · ${x.z==="side"?"side":"material"}`:""}</span>`).join("")}</div>`:""}${md(e.a||"")}${e.err?.length?`<p class="muted">Da sistemare: ${esc(e.err.join("; "))}</p>`:""}</div>`).join("");
+const labChampOpts=()=>{const seen=new Set();return[...LOWER.values()].filter(c=>isChamp(c)&&c.lvl>=1&&c.limit!==0).map(champName).filter(n=>!seen.has(n)&&seen.add(n)).sort().map(n=>`<option value="${esc(n)}">`).join("")};
 
 /* ---------- shell ---------- */
 function renderShell(){const opts=Object.values(S.decks).sort((a,b)=>b.updated-a.updated).map(d=>`<option value="${d.id}" ${d.id===S.current?"selected":""}>${esc(d.name)}</option>`).join("");$("#deckSel").innerHTML=opts;$("#deckSelM").innerHTML=opts;
@@ -578,6 +681,7 @@ lista(){const d=deck(),L=parseList(d.text),det=detectArch(L);
   <section class="panel">
     <div class="phead"><h2>Decklist</h2><span class="spacer"></span><span class="pill neu">${sum(L.material)} material · ${sum(L.main)} main · ${sum(L.side)} side</span></div>
     ${d.example?`<div class="callout">${svg("spark",16)}<div>Lista di esempio: ${DATA.featured?`la lista della settimana, ${esc(DATA.featured.arch)} di ${esc(DATA.featured.player)} (${esc(DATA.featured.event)}, ${DATA.featured.size} giocatori).`:"una lista vincente recente."} Crea la tua con “+ Nuova” oppure incolla qui la tua lista.</div></div>`:""}
+    ${d.lab?`<div class="callout">${svg("lab",16)}<div style="flex:1">Lista nata nel Laboratorio. Le modifiche fatte qui le vede anche Claude.</div><button class="btn sm" type="button" data-go="lab">Torna al Lab</button></div>`:""}
     <div class="stack" style="gap:6px"><label class="label" for="deckName">Nome</label><input id="deckName" value="${esc(d.name)}"></div>
     <div class="stack" style="gap:6px"><label class="label" for="deckArch">Archetipo · collega la lista ai dati di matchup</label>
     <div class="row"><select id="deckArch" style="flex:1">${archOptions(d.arch)}</select>${det&&det.n!==d.arch?`<button class="btn sm primary useDet" type="button" data-n="${esc(det.n)}">Riconosciuta: ${esc(det.n)}</button>`:""}</div>${det&&det.alts.length&&(det.n!==d.arch||det.alts.some(x=>x.n!==d.arch))?`<div class="row" style="gap:6px"><span class="src">${det.n===d.arch?"Simile anche a":"Oppure"}:</span>${det.alts.filter(x=>x.n!==d.arch).map(x=>`<button class="btn sm ghost useDet" type="button" data-n="${esc(x.n)}">${esc(x.n)}</button>`).join("")}</div>`:""}</div>
@@ -632,6 +736,43 @@ analisi(){const d=deck(),A=analyze(d),C=consensusDiff(d,A.L),H=A.H;const maxC=Ma
     <div class="row"><input id="aiQ" style="flex:1;min-width:200px" placeholder="Fai una domanda, es. conviene il secondo Frostbind contro Fire Coup Ciel?"><button class="btn" id="aiAsk" type="button">Chiedi</button></div>
     <div class="ai" id="aiQOut" hidden></div></section>
   </div>`},
+
+lab(){const d=deck();
+  if(!d.lab||S.labNew){const D=S.labDraft;return`<div class="grid2">
+  <section class="panel"><div class="phead"><h2 class="row" style="gap:8px"><span style="color:var(--accent);display:inline-flex">${svg("lab",18)}</span>Dall'idea alla lista</h2></div>
+    <p class="note">Descrivi il mazzo che hai in mente. Claude studia il meta (${WIN_LAB[curWin()].toLowerCase()}), gli archetipi vicini e tutte le carte, comprese quelle che nessuno gioca, poi costruisce <b>una lista solida e legale</b>. Dopo la migliorate insieme, una modifica alla volta.</p>
+    <div class="stack" style="gap:6px"><label class="label" for="lab_idea">L'idea</label><textarea id="lab_idea" rows="5" placeholder="Es. Water control che vince facendo finire le carte all'avversario, con tanti ally che difendono e pescano.">${esc(D.idea)}</textarea></div>
+    <div class="stack" style="gap:6px"><label class="label" for="lab_champ">Champion · facoltativo</label><input id="lab_champ" list="labChamps" value="${esc(D.champ)}" placeholder="Lascia vuoto per farlo scegliere a Claude"><datalist id="labChamps">${labChampOpts()}</datalist></div>
+    <div class="grid-eq" style="gap:12px"><div class="stack" style="gap:6px"><label class="label" for="lab_must">Carte da includere</label><textarea id="lab_must" rows="2" placeholder="Una per riga, facoltativo">${esc(D.must)}</textarea></div>
+    <div class="stack" style="gap:6px"><label class="label" for="lab_avoid">Carte da evitare</label><textarea id="lab_avoid" rows="2" placeholder="Una per riga, facoltativo">${esc(D.avoid)}</textarea></div></div>
+    <div class="row" style="gap:8px"><span class="label">Obiettivo</span><div class="seg" id="labLevel" role="group" aria-label="Obiettivo"><button type="button" data-v="local" class="${D.level==="local"?"on":""}">Torneo locale</button><button type="button" data-v="regional" class="${D.level!=="local"?"on":""}">Regional o più grande</button></div></div>
+    <div class="row"><button class="btn primary" id="labGo" type="button">${svg("spark",16)}Crea la lista</button><span class="src">Ci vogliono 1–3 minuti.</span>${d.lab&&S.labNew?`<span class="spacer"></span><button class="btn ghost" type="button" data-lab-open="${d.id}">Torna a ${esc(d.name)}</button>`:""}</div>
+    <div class="ai" id="labOut" hidden></div></section>
+  <section class="panel"><div class="phead"><h2>Le tue liste del Laboratorio</h2></div>
+    ${labDecksHTML()||`<div class="hero-empty"><b style="color:var(--fg)">Ancora nessuna lista</b><span>Le liste create qui finiscono tra le tue liste con il prefisso “Lab ·”.</span></div>`}
+    <span class="label">Come leggere le etichette</span>
+    <ul class="issues"><li class="issue"><span>🟢</span><div><b>Collaudata</b><p>Compare in almeno il 30% delle liste di un archetipo.</p></div></li><li class="issue"><span>🟡</span><div><b>Da provare</b><p>Giocata, ma in meno liste.</p></div></li><li class="issue"><span>💎</span><div><b>Fuori dal meta</b><p>Non compare nelle liste di consenso: è una carta nascosta, da testare.</p></div></li></ul>
+    <p class="src">Claude legge i testi ufficiali delle carte dall'Index e controlla la lista con lo stesso controllo di legalità dell'app. Può comunque sbagliare valutazioni: le carte nascoste vanno sempre testate.</p></section></div>`}
+  const chk=labCheck(d.text),L=chk.L,tags={collaudate:0,poco_giocate:0,fuori_dal_meta:0};L.main.forEach(c=>{const t=labTag(c.name);if(t)tags[t.key]+=c.qty});
+  const row=(c,z)=>{const k=card(c.name),t=labTag(c.name);return`<tr><td class="num">${c.qty}</td><td>${k?costBadge(k):""}</td><td><span class="lab-name"><span class="dot ${k?dotKey(k):"ADV"}"></span><span>${ci(c.name)}${k?"":' <span class="pill bad">non trovata</span>'}${k&&isChamp(k)?` <span class="pill acc">Lv ${k.lvl}</span>`:""}</span></span></td><td style="text-align:center">${t&&z!=="material"?`<span class="lab-tag" title="${esc(t.t+" · "+t.tip)}" aria-label="${esc(t.t)}">${t.i}</span>`:""}</td><td>${k&&!isChamp(k)?`<button type="button" class="btn sm ghost lab-alt" data-alt="${esc(c.name)}" title="Alternative a ${esc(c.name)}" aria-label="Alternative a ${esc(c.name)}">⇄</button>`:""}</td></tr>`};
+  const sec=(lab,arr,z)=>arr.length?`<tr class="sec"><td colspan="5">${lab} · ${sum(arr)}</td></tr>`+arr.map(c=>row(c,z)).join(""):"";
+  return`<div class="grid2">
+  <section class="panel"><div class="phead"><h2>${esc(d.name)}</h2><span class="spacer"></span>${chk.bad.length?`<span class="pill bad">${chk.bad.length} da sistemare</span>`:`<span class="pill good">✓ Legale</span>`}</div>
+    <p class="note" style="margin:0"><b>Idea:</b> ${esc(d.lab.idea)}</p>
+    <div class="row" style="gap:6px"><span class="pill good" title="Main deck">🟢 ${tags.collaudate} collaudate</span><span class="pill warn" title="Main deck">🟡 ${tags.poco_giocate} da provare</span><span class="pill acc" title="Main deck">💎 ${tags.fuori_dal_meta} fuori dal meta</span><span class="pill neu">${sum(L.material)} material · ${sum(L.main)} main · ${sum(L.side)} side</span>${d.arch?`<span class="pill neu"><span class="dot ${ARCH_DOT(d.arch)}" style="margin-right:2px"></span>vicina a ${esc(d.arch)}</span>`:""}</div>
+    ${chk.bad.length?`<ul class="issues">${chk.bad.map(r=>issueLi({lvl:"bad",t:r.t,p:r.p})).join("")}</ul>`:""}
+    <div class="tablewrap"><table><thead><tr><th class="num">Q.</th><th>Costo</th><th>Carta</th><th title="Etichetta">Tipo</th><th><span class="sr-only">Alternative</span></th></tr></thead>
+    <tbody id="labRows">${sec("Material deck",L.material,"material")+sec("Main deck",L.main,"main")+sec("Sideboard",L.side,"side")||`<tr><td colspan="5"><div class="hero-empty">La lista è vuota.</div></td></tr>`}</tbody></table></div>
+    <p class="src">🟢 collaudata (in almeno il 30% delle liste di un archetipo) · 🟡 da provare (giocata, ma meno) · 💎 fuori dal meta (carta nascosta). Tocca l'emoji per il dettaglio. ⇄ chiede a Claude le alternative a quella carta, senza cambiare la lista.</p>
+    <div class="row"><button class="btn primary" type="button" data-go="lista">Apri nel deckbuilder</button><button class="btn" type="button" data-go="analisi">Analisi</button>${d.lab.undo?`<button class="btn ghost" type="button" id="labUndo">Annulla l'ultima modifica</button>`:""}<span class="spacer"></span><button class="btn ghost" type="button" data-act="labnew">+ Nuova idea</button></div>
+    ${Object.values(S.decks).filter(x=>x.lab).length>1?`<span class="label">Altre liste del Laboratorio</span>${labDecksHTML(d.id)}`:""}
+  </section>
+  <section class="panel"><div class="phead"><h2 class="row" style="gap:8px"><span style="color:var(--accent);display:inline-flex">${svg("spark",18)}</span>Passo passo con Claude</h2></div>
+    <div class="lab-log" id="labLog">${labLogHTML(d)}</div>
+    <div class="row" style="gap:6px">${LAB_QUICK.map(([l,q])=>`<button type="button" class="chip" data-labq="${esc(q)}" data-lab-label="${esc(l)}">${esc(l)}</button>`).join("")}</div>
+    <div class="row" style="align-items:flex-end"><textarea id="labQ" rows="2" style="flex:1;min-width:200px" placeholder="Chiedi una modifica, es. «più rimozione contro Diao Chan» o «togli Frostbind: cosa metto?»"></textarea><button class="btn primary" id="labSend" type="button">Invia</button></div>
+    <p class="src">Ogni richiesta cambia poco alla volta. Se modifichi la lista a mano nel deckbuilder, Claude vede la versione aggiornata.</p>
+  </section></div>`},
 
 meta(){const t=S.meta.reduce((s,a)=>s+(+a.share||0),0);const d=deck();const maxCh=Math.max(...DATA.champs.map(c=>c.decks));
   const W=DATA.weekly,Dl=DATA.delta,So=DATA.social;const isTrend=!(Dl&&Dl.movers&&Dl.movers.length);const MV=isTrend?(DATA.snap.trend||[]).map(m=>[m[0],m[1],null,m[3]]):Dl.movers;
@@ -797,6 +938,17 @@ const BIND={
    if(txt){d.aiAnalysis=txt;save()}};
   $("#aiAsk").onclick=()=>{const q=$("#aiQ").value.trim();if(!q)return;runAI($("#aiAsk"),$("#aiQOut"),`${PREAMBLE}\n\n${deckContext(d)}\n\nDomanda del giocatore: ${q}\n\nRispondi in modo mirato, massimo 250 parole. Se la domanda riguarda una regola, cita la regola pertinente.`)};
   $("#aiQ").onkeydown=e=>{if(e.key==="Enter")$("#aiAsk").click()}},
+ lab(){const d=deck();
+  if($("#labGo")){const D=S.labDraft;["idea","champ","must","avoid"].forEach(k=>{const el=$("#lab_"+k);el.oninput=()=>{D[k]=el.value;save()}});
+    $("#labLevel").onclick=e=>{const b=e.target.closest("[data-v]");if(!b)return;D.level=b.dataset.v;$("#labLevel").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));save()};
+    $("#labGo").onclick=labCreate;return}
+  $("#labSend").onclick=()=>{const q=$("#labQ").value.trim();if(q)labSend(q)};
+  $("#labQ").onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("#labSend").click()}};
+  document.querySelectorAll("[data-labq]").forEach(b=>b.onclick=()=>labSend(b.dataset.labq,b.dataset.labLabel));
+  $("#labRows").addEventListener("click",e=>{const a=e.target.closest("[data-alt]");if(!a)return;const n=fromAttr(a.dataset.alt);
+    labSend(`Proponi 3–5 alternative a ${n} per questa lista, con lo stesso ruolo o un ruolo migliore per l'idea. Includi almeno una carta poco giocata o fuori dal meta se ne esiste una davvero adatta (verificala). Per ognuna: cosa guadagno, cosa perdo, quante copie. NON modificare la lista.`,`Alternative a ${n}`)});
+  $("#labUndo")&&($("#labUndo").onclick=()=>{d.text=d.lab.undo;delete d.lab.undo;d.lab.log.push({q:"Annulla l'ultima modifica",a:"Ho ripristinato la lista precedente.",diff:[],err:[],at:Date.now()});d.updated=Date.now();save();render();toast("Modifica annullata")});
+  const L2=$("#labLog");if(L2)L2.scrollTop=L2.scrollHeight},
  meta(){const v=$("#view");
   const dlSlide=async f=>{try{const dl=await window.claude?.use?.("downloads");if(!dl)throw{code:"na"};const blob=await (await fetch(`social/${f}?v=${DATA.social.ver||DATA.social.date}`)).blob();await dl.save({filename:`meta-report-${DATA.social.date}-${f}`,data:blob});return true}catch(e){if(e?.code==="na")toast("Download non disponibile qui: tieni premuto sull'immagine per salvarla");else if(e?.code!=="cancelled"&&e?.code!=="declined")toast("Download non riuscito: riprova");return false}};
   v.addEventListener("click",async e=>{const b=e.target.closest("[data-dl-slide]");if(b){if(await dlSlide(b.dataset.dlSlide))toast("Slide salvata")}});
@@ -848,7 +1000,9 @@ document.addEventListener("click",e=>{
   const tab=e.target.closest("[data-tab]");if(tab){go(tab.dataset.tab);return}
   const g=e.target.closest("[data-go]");if(g){go(g.dataset.go);return}
   const gm=e.target.closest("[data-go-mu]");if(gm){S.sel=gm.dataset.goMu;go("matchup");return}
+  const lo=e.target.closest("[data-lab-open]");if(lo){S.current=lo.dataset.labOpen;S.labNew=false;S.tab="lab";save();render();window.scrollTo({top:0});return}
   const act=e.target.closest("[data-act]");if(!act)return;const a=act.dataset.act;
+  if(a==="labnew"){S.labNew=true;S.tab="lab";save();render();window.scrollTo({top:0});$("#lab_idea")?.focus();return}
   if(a==="new"){const d=freshDeck("Nuova lista","# Material Deck\n\n# Main Deck\n\n# Sideboard\n");S.decks[d.id]=d;S.current=d.id;S.tab="lista";save();render();$("#deckText")?.focus()}
   if(a==="dup"){const o=deck();const d=structuredClone(o);d.id=uid();d.name=o.name+" (copia)";d.example=false;d.updated=Date.now();S.decks[d.id]=d;S.current=d.id;save();render();toast("Lista duplicata")}
   if(a==="del"){if(Object.keys(S.decks).length<2){toast("Serve almeno una lista");return}

@@ -106,6 +106,10 @@ Quando l'utente scrive «controllo news» (o simile), esegui subito, in questa s
 - Interfaccia moderna, con sezioni a tendina (pieghevoli) e intestazione compattabile su mobile.
 - Il periodo di analisi si può scegliere fra stagione, 30 giorni e 15 giorni.
 - Cliccando una carta si apre la sua immagine.
+- **Laboratorio** (scheda "Lab"): l'utente descrive un'idea di mazzo (più champion, carte da includere o da evitare e obiettivo, tutti facoltativi) e Claude costruisce **una sola lista solida**. Poi la si modifica **passo passo** in una conversazione a più turni, con le cronologie salvate in `deck.lab`. Le liste si salvano tra quelle dell'utente con il prefisso **"Lab ·"**.
+  - Etichette: 🟢 collaudata (in almeno il 30% delle liste di un archetipo), 🟡 da provare, 💎 fuori dal meta (calcolate da `card.use`, non da Claude).
+  - Strumenti dell'agente: `cerca_carta`, `cerca_testo` (più termini con ` + `, filtri `classe` e `solo_non_giocate`), `champion`, `valida_lista` (lo stesso controllo di legalità dell'app), `archetipo` e `regola`. Se la lista ha errori, l'app chiede una correzione automatica una volta.
+  - Il pulsante ⇄ su una carta chiede le alternative senza cambiare la lista. "Annulla l'ultima modifica" ripristina la versione precedente.
 
 ## Instagram: credenziali e scadenze
 - Si usa la Instagram Graph API **con accesso tramite Facebook** (`graph.facebook.com`).
