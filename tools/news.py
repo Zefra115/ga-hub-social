@@ -317,6 +317,45 @@ def _frame(P, W, H, src, kicker, source, area_top, area_bot):
     return im
 
 
+_SR = {"ready": None}
+
+
+def _super_res(card, work=None):
+    """Super-resolution x2 con EDSR (OpenCV dnn_superres) per le carte piccole.
+    Serve la cartella indicata da GAHUB_SR (vedi tools/setup_sr.sh) con pylib/ e EDSR_x2.pb.
+    Se manca, ritorna la carta com'è (si usa il ridimensionamento normale)."""
+    import hashlib, io
+    from PIL import Image
+    base = os.environ.get("GAHUB_SR")
+    if not base or not os.path.exists(os.path.join(base, "EDSR_x2.pb")):
+        return card
+    if _SR["ready"] is None:
+        try:
+            sys.path.insert(0, os.path.join(base, "pylib"))
+            import cv2  # noqa: F401
+            sr = cv2.dnn_superres.DnnSuperResImpl_create()
+            sr.readModel(os.path.join(base, "EDSR_x2.pb"))
+            sr.setModel("edsr", 2)
+            _SR["ready"], _SR["sr"], _SR["cv2"] = True, sr, cv2
+        except Exception as e:  # noqa: BLE001
+            print("super-resolution non disponibile:", e, file=sys.stderr)
+            _SR["ready"] = False
+    if not _SR["ready"]:
+        return card
+    buf = io.BytesIO()
+    card.save(buf, "PNG")
+    key = hashlib.md5(buf.getvalue()).hexdigest()
+    cache = os.path.join(work or base, f"sr-{key}.png")
+    if os.path.exists(cache):
+        return Image.open(cache).convert("RGB")
+    import numpy as np
+    cv2 = _SR["cv2"]
+    up = _SR["sr"].upsample(cv2.cvtColor(np.asarray(card.convert("RGB")), cv2.COLOR_RGB2BGR))
+    out = Image.fromarray(cv2.cvtColor(up, cv2.COLOR_BGR2RGB))
+    out.save(cache)
+    return out
+
+
 def _tight(card, thr=70, frac=0.6):
     """Toglie bordi scuri e sfondo attorno alla carta: tiene righe/colonne in cui la maggior parte dei pixel non è scura."""
     import numpy as np
@@ -328,15 +367,19 @@ def _tight(card, thr=70, frac=0.6):
     return card.crop((int(cols[0]), int(rows[0]), int(cols[-1]) + 1, int(rows[-1]) + 1))
 
 
-def _cards(P, W, H, src, boxes, label, emo, subtitle, source, pad=0.0):
+def _cards(P, W, H, src, boxes, label, emo, subtitle, source, pad=0.0, work=None):
     """Carte grandi e leggibili (1 al centro; 2 affiancate; 3-4 su due righe), artwork della prima carta
     sfocato dietro, titolo con emoji (es. 🔥 SPOILER ALERT 🔥, 🚫 BAN LIST 🚫)."""
     from PIL import Image, ImageDraw, ImageFilter
     story = H > 1500
     from PIL import ImageOps
     cards = [src.crop(b) for b in boxes]
-    if pad:  # carta ritagliata stretta sulla cornice colorata + bordo nero uniforme su tutti i lati
-        cards = [ImageOps.expand(_tight(c), border=max(2, int(c.width * pad)), fill=(14, 14, 16)) for c in cards]
+    if pad:  # carta ritagliata stretta sulla cornice colorata
+        cards = [_tight(c) for c in cards]
+    # carte piccole (es. catture da video): super-resolution x2 prima di ingrandirle
+    cards = [_super_res(c, work) if c.width < 650 else c for c in cards]
+    if pad:  # bordo nero uniforme su tutti i lati
+        cards = [ImageOps.expand(c, border=max(2, int(c.width * pad)), fill=(14, 14, 16)) for c in cards]
     cw, ch = cards[0].size
     art = cards[0].crop((int(cw * .06), int(ch * .09), int(cw * .94), int(ch * .58)))  # illustrazione della carta
     im = _cover(art, W, H, 22, 0.62)
@@ -374,7 +417,7 @@ def _cards(P, W, H, src, boxes, label, emo, subtitle, source, pad=0.0):
         rw = in_row * tw_ + (in_row - 1) * gap
         cx = (W - rw) // 2 + c * (tw_ + gap)
         cy = oy + r * (th + gap)
-        big = card.resize((tw_, th), Image.LANCZOS).filter(ImageFilter.UnsharpMask(2, 60, 2))
+        big = card.resize((tw_, th), Image.LANCZOS).filter(ImageFilter.UnsharpMask(1.2, 45, 2))
         glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         ImageDraw.Draw(glow).rounded_rectangle([cx - 8, cy - 8, cx + tw_ + 8, cy + th + 8], 34, fill=P.ACC + (110,))
         glow = glow.filter(ImageFilter.GaussianBlur(24))
@@ -425,11 +468,11 @@ def render(work, man):
                     continue
                 if boxes:
                     label, emo = TITLES[k]
-                    out_im = _cards(P, W, H, src, boxes, label, emo, it.get("subtitle", ""), it["source"], it.get("card_pad", 0.0))
+                    out_im = _cards(P, W, H, src, boxes, label, emo, it.get("subtitle", ""), it["source"], it.get("card_pad", 0.0), work)
                 else:
                     out_im = _frame(P, W, H, src, kicker, it["source"], 0, 400 if kind == "story" else 130)
                 out = os.path.join(work, f"{it['id']}-{n}-{kind}.jpg")
-                out_im.save(out, quality=92)
+                out_im.save(out, quality=95, subsampling=0)  # niente sottocampionamento colore: testo più nitido
                 it["stories" if kind == "story" else "posts"].append(os.path.basename(out))
     json.dump(man, open(os.path.join(work, "manifest.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
