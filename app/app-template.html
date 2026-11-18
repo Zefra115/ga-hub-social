@@ -477,7 +477,13 @@ const RULES_PRIMER=`REGOLE CHIAVE (Comprehensive Rules di Grand Archive):
 - Elementi: Norm sempre abilitato; gli altri si abilitano con i champion della lineage; Exalted richiede un champion di elemento avanzato. Le carte non-champion non abilitano elementi.
 - Class Locked / Level Locked / Class Bonus / Element Bonus / Champion Bonus dipendono dal champion.
 - Si perde se il champion muore o pescando da un mazzo vuoto (rilevante contro Mill).
-- Slow: solo nel proprio main phase a stack vuoto (allies e attack sono slow). Fast: ogni volta che si ha Opportunity.`;
+- Slow: solo nel proprio main phase a stack vuoto (allies e attack sono slow). Fast: ogni volta che si ha Opportunity.
+
+PRINCIPI DI DECKBUILDING DEL GIOCATORE (da rispettare):
+- L'influenza (carte in mano + memoria) è una risorsa chiave. Privilegia carte a influenza positiva (pescano più di quanto costano, es. "draw two", "draw a card into your memory") o neutra (si rimpiazzano da sole, oppure hanno Floating Memory). Una carta a influenza negativa deve avere un impatto forte sul piano di gioco.
+- Floating Memory rende neutra una carta, ma il suo effetto deve comunque servire al mazzo: un effetto inutile in quel mazzo è uno slot sprecato.
+- Le carte che dipendono da un tipo (es. Tune Up con gli Automaton) si valutano contando quante carte di quel tipo ci sono davvero nel mazzo.
+- Le carte scontate dal livello non devono arrivare troppo tardi rispetto al piano: in un mazzo aggressivo conta la pressione dai primi turni.`;
 function deckContext(d){const L=parseList(d.text);const f=a=>a.map(c=>cardLine(c.name,c.qty)).join("\n");const t=totShare();
   const metaTxt=S.meta.map(a=>{const e=effWR(d,a);return`- ${archLabel(a.id)}: ${pct1((+a.share||0)/t)} del field; win rate stimato ${pct(e.wr)} (${e.src})`}).join("\n");
   const rules=legality(L).filter(r=>!r.ok).map(r=>`- ${r.t}: ${r.p}`).join("\n");
@@ -504,10 +510,12 @@ const AI_TOOLS=status=>[
    for(const c of LOWER.values()){if(!isChamp(c)||c.limit===0)continue;if(q&&!c.name.toLowerCase().includes(q))continue;if(el&&!elsOf(c).includes(el))continue;if(cl&&!c.cls.toUpperCase().includes(cl))continue;out.push(c)}
    if(!out.length)throw new Error("Nessun champion trovato");out.sort((a,b)=>(b.use.length-a.use.length)||((a.lvl??0)-(b.lvl??0)));
    return out.slice(0,q?10:30).map(c=>({nome:c.name,livello:c.lvl,elementi:c.el,classe:c.cls||"—",life:c.life,costo_memory:c.mem,sale_da:lineageReq(c)||"qualsiasi champion del livello precedente",testo:q?c.fx:short(c.fx.replace(/\s+/g," "),260),giocato_in:c.use.length?c.use.slice(0,4).map(u=>`${u[0]} ${u[2]}%`):"fuori dal meta"}))}},
- {name:"valida_lista",description:"Controlla una lista completa (sezioni '# Material Deck', '# Main Deck', '# Sideboard', righe 'N Nome carta') con lo stesso controllo di legalità dell'app: main ≥60, max 4 copie, material deck ≤12 con Spirit Lv0 e percorso di level up, elementi abilitati, Class/Level Locked, una Divine Relic, sideboard 15 carte/15 punti, ban list. Restituisce errori, avvisi, conteggi, mano iniziale, curva di costo del main e quante carte sono collaudate, poco giocate o fuori dal meta. Usalo SEMPRE prima di consegnare una lista.",inputSchema:{type:"object",properties:{lista:{type:"string"}},required:["lista"]},
+ {name:"valida_lista",description:"Controlla una lista completa (conta anche le carte del main che pescano e quelle con Floating Memory, per valutare l'influenza) (sezioni '# Material Deck', '# Main Deck', '# Sideboard', righe 'N Nome carta') con lo stesso controllo di legalità dell'app: main ≥60, max 4 copie, material deck ≤12 con Spirit Lv0 e percorso di level up, elementi abilitati, Class/Level Locked, una Divine Relic, sideboard 15 carte/15 punti, ban list. Restituisce errori, avvisi, conteggi, mano iniziale, curva di costo del main e quante carte sono collaudate, poco giocate o fuori dal meta. Usalo SEMPRE prima di consegnare una lista.",inputSchema:{type:"object",properties:{lista:{type:"string"}},required:["lista"]},
   execute:({lista})=>{status("controlla la lista");const {L,bad,warn}=labCheck(String(lista||""));const curve={};L.main.forEach(c=>{const v=costOf(card(c.name));const k=v==null?"senza costo":v>=5?"5+":String(v);curve[k]=(curve[k]||0)+c.qty});
    const tags={collaudate:0,poco_giocate:0,fuori_dal_meta:0};L.main.forEach(c=>{const t=labTag(c.name);if(t)tags[t.key]+=c.qty});
-   return{legale:!bad.length,errori:bad.map(r=>`${r.t}: ${r.p}`),avvisi:warn.map(r=>`${r.t}: ${r.p}`),material:sum(L.material),main:sum(L.main),sideboard:sum(L.side),mano_iniziale:handSize(L),curva_main:curve,etichette_main:tags}}},
+   const q=re=>L.main.filter(c=>re.test(card(c.name)?.fx||"")).reduce((s,c)=>s+c.qty,0);
+   return{legale:!bad.length,errori:bad.map(r=>`${r.t}: ${r.p}`),avvisi:warn.map(r=>`${r.t}: ${r.p}`),material:sum(L.material),main:sum(L.main),sideboard:sum(L.side),mano_iniziale:handSize(L),curva_main:curve,etichette_main:tags,
+    influenza_main:{carte_che_pescano:q(/draw (a|an|one|two|three|\d+) cards?|draw a card|draw two/i),con_floating_memory:q(/Floating Memory/i),nota:"conteggio automatico dal testo: verifica le condizioni (Class Bonus, Level)"}}}},
  {name:"archetipo",description:"Dati di un archetipo del meta: champion, quota, win rate, lista di consenso (main, sideboard, material con %), head-to-head contro l'archetipo del giocatore e lista vincente più recente.",inputSchema:{type:"object",properties:{nome:{type:"string"}},required:["nome"]},
   execute:({nome})=>{const n=COLS.find(x=>x.toLowerCase()===String(nome).toLowerCase())||COLS.find(x=>x.toLowerCase().includes(String(nome).toLowerCase()));status(`studia ${n||nome}`);if(!n)throw new Error("Archetipo non trovato. Disponibili: "+COLS.join(", "));
    const m=META[n],c=DATA.cons[n],d=deck(),v=d.arch?mxVal(d.arch,n):null;return{archetipo:n,champion:m.ch.slice(0,3),tier:m.tier,quota:m.share+"%",win_rate:m.wr+"%",win_rate_corretto_elo:m.adj+"%",liste:m.decks,

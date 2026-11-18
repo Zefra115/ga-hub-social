@@ -80,6 +80,11 @@ Quando l'utente scrive «controllo news» (o simile), esegui subito, in questa s
   - sideboard di al massimo 15 carte e 15 punti (champion e regalia valgono 3).
 - Gli elementi abilitati dal champion danno solo un **avviso**, non un errore, perché alcuni effetti mettono in gioco carte di altri elementi.
 - Regolamento: rules.gatcg.com (general-rules, game-mechanics).
+- **Principi di deckbuilding dell'utente** (sono anche nei prompt dell'app):
+  - L'**influenza** (carte in mano + memoria) è fondamentale: preferire carte a influenza positiva (che pescano) o neutra (che si rimpiazzano o hanno Floating Memory).
+  - Floating Memory non basta: l'effetto della carta deve servire al mazzo (es. Reprogram senza Nimue o Automaton fa poco).
+  - Le carte legate a un tipo (es. Tune Up con gli Automaton) si valutano contando quante carte di quel tipo ci sono davvero nel mazzo.
+  - In un mazzo aggressivo conta la pressione dai primi turni: le carte scontate solo ad alto livello arrivano tardi (es. Equanimity's Ashes in Merlin).
 
 ### Dati
 - Le fonti sono grandarchivestats.com e fractalofin.site; le carte vengono da api.gatcg.com.
