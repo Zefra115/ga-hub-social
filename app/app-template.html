@@ -199,6 +199,18 @@ details[open]>summary::before{transform:rotate(90deg)}
 .lab-q{align-self:flex-end;background:var(--sunk);border:1px solid var(--line);border-radius:12px 12px 4px 12px;padding:8px 12px;max-width:88%;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
 .lab-diff{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.cgrid-wrap{display:flex;flex-direction:column;gap:14px}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:12px 10px}
+.cg-card{position:relative;display:flex;flex-direction:column;gap:5px;min-width:0}
+.cg-open{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;border-radius:8px}
+.cg-open:hover .cardimg{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.28)}
+.cgrid .cardimg{width:100%;border-radius:8px;box-shadow:0 3px 10px rgba(0,0,0,.2);transition:transform .15s,box-shadow .15s}
+.cgrid .cardimg.loading::after,.cgrid .cardimg.noimg::after{font-size:11px;padding:6px}
+.cg-q{position:absolute;top:6px;left:6px;min-width:26px;height:22px;padding:0 6px;border-radius:999px;background:rgba(10,12,20,.82);color:#fff;font:700 12px var(--f-mono);display:flex;align-items:center;justify-content:center;pointer-events:none}
+.cg-tag{position:absolute;top:5px;right:5px;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));pointer-events:none}
+.cg-n{font-size:11.5px;line-height:1.3;color:var(--muted);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cg-alt{position:absolute;bottom:34px;right:5px;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+.cg-alt:hover{border-color:var(--accent);color:var(--accent)}
 .lab-name{display:inline-flex;align-items:flex-start;gap:6px}
 .lab-name .dot{flex:none;margin:5px 0 0}
 .lab-tag{font-size:14px;cursor:help}
@@ -624,6 +636,19 @@ const labDecksHTML=cur=>{const ls=Object.values(S.decks).filter(x=>x.lab).sort((
 const labLogHTML=d=>d.lab.log.map(e=>`<div class="lab-q">${esc(e.q)}</div><div class="ai">${e.diff?.length?`<div class="lab-diff">${e.diff.map(x=>`<span class="pill ${x.d>0?"good":"bad"}">${x.d>0?"+":"−"}${Math.abs(x.d)} ${esc(x.n)}${x.z!=="main"?` · ${x.z==="side"?"side":"material"}`:""}</span>`).join("")}</div>`:""}${md(e.a||"")}${e.err?.length?`<p class="muted">Da sistemare: ${esc(e.err.join("; "))}</p>`:""}</div>`).join("");
 const labChampOpts=()=>{const seen=new Set();return[...LOWER.values()].filter(c=>isChamp(c)&&c.lvl>=1&&c.limit!==0).map(champName).filter(n=>!seen.has(n)&&seen.add(n)).sort().map(n=>`<option value="${esc(n)}">`).join("")};
 
+/* ---------- griglia con le anteprime delle carte ---------- */
+const cardView=()=>S.cardView==="grid"?"grid":"table";
+const viewSeg=()=>`<div class="seg" role="group" aria-label="Vista delle carte"><button type="button" data-cv="table" class="${cardView()==="table"?"on":""}">Tabella</button><button type="button" data-cv="grid" class="${cardView()==="grid"?"on":""}">Griglia</button></div>`;
+function cardGridHTML(L,opts={}){const secs=[["Material deck",L.material,"material"],["Main deck",L.main,"main"],["Sideboard",L.side,"side"]];
+  const html=secs.filter(x=>x[1].length).map(([lab,arr,z])=>`<div class="stack" style="gap:8px"><span class="label">${lab} · ${sum(arr)}</span><div class="cgrid">${arr.map(c=>{const k=card(c.name),t=opts.tags&&z!=="material"?labTag(c.name):null;
+    return`<div class="cg-card"><button type="button" class="cg-open" data-ci="${esc(c.name)}" title="${esc(c.name)}" aria-label="${c.qty} ${esc(c.name)}"><div data-img="${esc(c.name)}"></div></button><span class="cg-q">${c.qty}</span>${t?`<span class="cg-tag" title="${esc(t.t)}">${t.i}</span>`:""}${opts.alt&&k&&!isChamp(k)?`<button type="button" class="cg-alt" data-alt="${esc(c.name)}" title="Alternative a ${esc(c.name)}" aria-label="Alternative a ${esc(c.name)}">⇄</button>`:""}<span class="cg-n">${k?"":"⚠ "}${esc(c.name)}</span></div>`}).join("")}</div></div>`).join("");
+  return`<div class="cgrid-wrap" ${opts.id?`id="${opts.id}"`:""}>${html||`<div class="hero-empty">${opts.empty||"La lista è vuota."}</div>`}</div>`}
+let gridObs=null;
+function paintGrids(root){const els=[...root.querySelectorAll("[data-img]")];if(!els.length)return;const paint=el=>{const c=card(el.dataset.img);el.dataset.name=c?c.name:"";spriteStyle(el,c,true)};
+  if(!("IntersectionObserver" in window)){els.forEach(paint);return}gridObs?.disconnect();
+  gridObs=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){gridObs.unobserve(x.target);paint(x.target)}}),{rootMargin:"400px 0px"});
+  els.forEach(el=>{el.className="cardimg loading";gridObs.observe(el)})}
+
 /* ---------- shell ---------- */
 function renderShell(){const opts=Object.values(S.decks).sort((a,b)=>b.updated-a.updated).map(d=>`<option value="${d.id}" ${d.id===S.current?"selected":""}>${esc(d.name)}</option>`).join("");$("#deckSel").innerHTML=opts;$("#deckSelM").innerHTML=opts;
   const nav=TABS.map(([k,l])=>`<button type="button" role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${svg(k)}<span>${l}</span></button>`).join("");$("#nav").innerHTML=nav;$("#tabbar").innerHTML=nav;
@@ -645,7 +670,7 @@ function applyFolds(v){S.folds=S.folds||{};const panels=[...v.querySelectorAll("
    const tog=()=>{const c=!p.classList.contains("collapsed");p.classList.toggle("collapsed",c);h.setAttribute("aria-expanded",String(!c));S.folds[k]=c;save()};
    h.addEventListener("click",e=>{if(e.target.closest("button,a,input,select,textarea,label,.seg"))return;tog()});h.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target===h){e.preventDefault();tog()}})});
   if(panels.length>1){v.insertAdjacentHTML("afterbegin",`<div class="foldbar"><button class="btn sm ghost" type="button" data-fold-all="0">Espandi tutto</button><button class="btn sm ghost" type="button" data-fold-all="1">Comprimi tutto</button></div>`)}}
-function render(){renderShell();const old=$("#view"),v=old.cloneNode(false);old.replaceWith(v);v.innerHTML=(VIEWS[S.tab]||VIEWS.lista)();BIND[S.tab]?.();applyFolds(v)}
+function render(){renderShell();const old=$("#view"),v=old.cloneNode(false);old.replaceWith(v);v.innerHTML=(VIEWS[S.tab]||VIEWS.lista)();BIND[S.tab]?.();applyFolds(v);paintGrids(v)}
 const go=t=>{S.tab=t;save();render();window.scrollTo({top:0})};
 
 /* ---------- viste ---------- */
@@ -658,11 +683,12 @@ const issueLi=i=>`<li class="issue"><span class="ico ${i.lvl}">${ICO[i.lvl]}</sp
 const ci=n=>card(n)?`<button type="button" class="cname" data-ci="${esc(n)}">${esc(n)}</button>`:esc(n);
 function deckHTML(txt){return`<div class="decklist">${String(txt||"").split("\n").map(l=>{const m=l.match(/^(\d+)\s+(.+)$/);return m&&card(m[2])?`<button type="button" class="dl-line" data-ci="${esc(m[2])}">${esc(l)}</button>`:`<div>${esc(l)||"&nbsp;"}</div>`}).join("")}</div>`}
 const SHEETS=DATA.sheets,loadedSheets=new Set();let lastFocus=null,modalList=[],modalIdx=0;
-function spriteStyle(el,c){el.className="cardimg";el.style.backgroundImage="";if(!c||c.img<0){el.classList.add("noimg");return}
-  const s=Math.floor(c.img/100),i=c.img%100,rows=Math.ceil(SHEETS[s]/10),col=i%10,row=Math.floor(i/10);const url=`cards/s${String(s).padStart(2,"0")}.webp`;
+const badThumbs=new Set();
+function spriteStyle(el,c,thumb){el.className="cardimg";el.style.backgroundImage="";if(!c||c.img<0){el.classList.add("noimg");return}
+  const s=Math.floor(c.img/100),i=c.img%100,rows=Math.ceil(SHEETS[s]/10),col=i%10,row=Math.floor(i/10);if(thumb&&badThumbs.has(s))thumb=false;const url=`cards/${thumb?"t":"s"}${String(s).padStart(2,"0")}.webp`;
   el.style.backgroundSize=`1000% ${rows*100}%`;el.style.backgroundPosition=`${col/9*100}% ${rows>1?row/(rows-1)*100:0}%`;
   const apply=()=>{el.classList.remove("loading");el.style.backgroundImage=`url("${url}")`};
-  if(loadedSheets.has(url))apply();else{el.classList.add("loading");const im=new Image();im.onload=()=>{loadedSheets.add(url);if(el.dataset.name===c.name)apply()};im.onerror=()=>{el.classList.remove("loading");el.classList.add("noimg")};im.src=url}}
+  if(loadedSheets.has(url))apply();else{el.classList.add("loading");const im=new Image();im.onload=()=>{loadedSheets.add(url);if(el.dataset.name===c.name)apply()};im.onerror=()=>{if(thumb){badThumbs.add(s);if(el.dataset.name===c.name)spriteStyle(el,c,false);return}el.classList.remove("loading");el.classList.add("noimg")};im.src=url}}
 function openCard(name,list){const c=card(name);if(!c)return;const md=$("#cardModal");if(md.hidden)lastFocus=document.activeElement;
   modalList=list&&list.length?list:[c.name];modalIdx=Math.max(0,modalList.indexOf(c.name));
   const img=$("#cmImg");img.dataset.name=c.name;img.setAttribute("aria-label",c.name);spriteStyle(img,c);
@@ -698,10 +724,10 @@ lista(){const d=deck(),L=parseList(d.text),det=detectArch(L);
     <div class="row"><input id="addName" list="allCards" placeholder="Cerca una carta da aggiungere…" style="flex:1;min-width:170px" aria-label="Carta da aggiungere"><input id="addQty" type="number" min="1" max="4" value="1" aria-label="Quantità" style="width:60px"><div class="seg" id="addSec" role="group" aria-label="Sezione"><button type="button" class="on" data-v="main">Main</button><button type="button" data-v="side">Side</button><button type="button" data-v="material">Material</button></div><button class="btn sm primary" id="addBtn" type="button">Aggiungi</button></div>
   </section>
   <section class="panel">
-    <div class="phead"><h2>Carte</h2><span class="spacer"></span><span class="note"><span class="cost res">2</span> reserve &nbsp;<span class="cost mem">2</span> memory</span></div>
-    <p class="note">Dati dall'Index ufficiale. Clic sul nome per vedere la carta. I ruoli tratteggiati sono suggeriti dal testo della carta; un clic li rende tuoi.</p>
+    <div class="phead"><h2>Carte</h2><span class="spacer"></span>${viewSeg()}</div>
+    ${cardView()==="grid"?cardGridHTML(L,{empty:"Incolla una lista o aggiungi carte per vederle qui."})+`<p class="src">Tocca una carta per ingrandirla. Il numero in alto è la quantità.</p>`:`<p class="note">Dati dall'Index ufficiale. Clic sul nome per vedere la carta. I ruoli tratteggiati sono suggeriti dal testo della carta; un clic li rende tuoi. <span class="cost res">2</span> reserve <span class="cost mem">2</span> memory</p>
     <div class="tablewrap"><table><thead><tr><th class="num">Q.</th><th>Costo</th><th>Carta</th><th>Tipo</th><th>Ruoli</th></tr></thead>
-    <tbody id="cardRows">${sec("Material deck",L.material,"material")+sec("Main deck",L.main,"main")+sec("Sideboard",L.side,"side")||`<tr><td colspan="5"><div class="hero-empty">Incolla una lista o aggiungi carte per vederle qui.</div></td></tr>`}</tbody></table></div>
+    <tbody id="cardRows">${sec("Material deck",L.material,"material")+sec("Main deck",L.main,"main")+sec("Sideboard",L.side,"side")||`<tr><td colspan="5"><div class="hero-empty">Incolla una lista o aggiungi carte per vederle qui.</div></td></tr>`}</tbody></table></div>`}
   </section></div>`},
 
 analisi(){const d=deck(),A=analyze(d),C=consensusDiff(d,A.L),H=A.H;const maxC=Math.max(1,...Object.values(A.curve));
@@ -769,8 +795,9 @@ lab(){const d=deck();
     <p class="note" style="margin:0"><b>Idea:</b> ${esc(d.lab.idea)}</p>
     <div class="row" style="gap:6px"><span class="pill good" title="Main deck">🟢 ${tags.collaudate} collaudate</span><span class="pill warn" title="Main deck">🟡 ${tags.poco_giocate} da provare</span><span class="pill acc" title="Main deck">💎 ${tags.fuori_dal_meta} fuori dal meta</span><span class="pill neu">${sum(L.material)} material · ${sum(L.main)} main · ${sum(L.side)} side</span>${d.arch?`<span class="pill neu"><span class="dot ${ARCH_DOT(d.arch)}" style="margin-right:2px"></span>vicina a ${esc(d.arch)}</span>`:""}</div>
     ${chk.bad.length?`<ul class="issues">${chk.bad.map(r=>issueLi({lvl:"bad",t:r.t,p:r.p})).join("")}</ul>`:""}
-    <div class="tablewrap"><table><thead><tr><th class="num">Q.</th><th>Costo</th><th>Carta</th><th title="Etichetta">Tipo</th><th><span class="sr-only">Alternative</span></th></tr></thead>
-    <tbody id="labRows">${sec("Material deck",L.material,"material")+sec("Main deck",L.main,"main")+sec("Sideboard",L.side,"side")||`<tr><td colspan="5"><div class="hero-empty">La lista è vuota.</div></td></tr>`}</tbody></table></div>
+    <div class="row"><span class="spacer"></span>${viewSeg()}</div>
+    ${cardView()==="grid"?cardGridHTML(L,{tags:true,alt:true,id:"labRows"}):`<div class="tablewrap"><table><thead><tr><th class="num">Q.</th><th>Costo</th><th>Carta</th><th title="Etichetta">Tipo</th><th><span class="sr-only">Alternative</span></th></tr></thead>
+    <tbody id="labRows">${sec("Material deck",L.material,"material")+sec("Main deck",L.main,"main")+sec("Sideboard",L.side,"side")||`<tr><td colspan="5"><div class="hero-empty">La lista è vuota.</div></td></tr>`}</tbody></table></div>`}
     <p class="src">🟢 collaudata (in almeno il 30% delle liste di un archetipo) · 🟡 da provare (giocata, ma meno) · 💎 fuori dal meta (carta nascosta). Tocca l'emoji per il dettaglio. ⇄ chiede a Claude le alternative a quella carta, senza cambiare la lista.</p>
     <div class="row"><button class="btn primary" type="button" data-go="lista">Apri nel deckbuilder</button><button class="btn" type="button" data-go="analisi">Analisi</button>${d.lab.undo?`<button class="btn ghost" type="button" id="labUndo">Annulla l'ultima modifica</button>`:""}<span class="spacer"></span><button class="btn ghost" type="button" data-act="labnew">+ Nuova idea</button></div>
     ${Object.values(S.decks).filter(x=>x.lab).length>1?`<span class="label">Altre liste del Laboratorio</span>${labDecksHTML(d.id)}`:""}
@@ -937,7 +964,7 @@ const BIND={
     if(idx<0){lines.push("",hdr);idx=lines.length-1}let j=idx+1;while(j<lines.length&&!/^#/.test(lines[j].trim()))j++;while(j>idx+1&&!lines[j-1].trim())j--;lines.splice(j,0,`${q} ${name}`);
     d.text=lines.join("\n");d.example=false;d.updated=Date.now();save();render();toast(k?`Aggiunta ${name}${s!==sec?" nel material deck":""}`:`Aggiunta “${name}”, non trovata nell'Index`)};
   $("#addName").onkeydown=e=>{if(e.key==="Enter")$("#addBtn").click()};
-  $("#cardRows").addEventListener("click",e=>{const b=e.target.closest("[data-role]");if(!b)return;const n=fromAttr(b.closest("tr").dataset.card);const cur=rolesOf(d,n).roles;const r=b.dataset.role;
+  $("#cardRows")?.addEventListener("click",e=>{const b=e.target.closest("[data-role]");if(!b)return;const n=fromAttr(b.closest("tr").dataset.card);const cur=rolesOf(d,n).roles;const r=b.dataset.role;
     d.cards[n]=Object.assign(d.cards[n]||{},{roles:cur.includes(r)?cur.filter(x=>x!==r):[...cur,r]});save();b.closest(".chips").querySelectorAll(".chip").forEach(c=>{c.classList.remove("auto");c.classList.toggle("on",d.cards[n].roles.includes(c.dataset.role))})})},
  analisi(){const d=deck();
   $("#aiDeck").onclick=async()=>{const A=analyze(d),C=consensusDiff(d,A.L);
@@ -1001,13 +1028,14 @@ const BIND={
 document.addEventListener("click",e=>{
   if(e.target.id==="cardModal"||e.target.closest("#cmClose")){closeCard();return}
   if(e.target.closest("#cmPrev")){stepCard(-1);return}if(e.target.closest("#cmNext")){stepCard(1);return}
-  const cc=e.target.closest("[data-ci]");if(cc){const scope=cc.closest("tbody,.decklist,.issues,.archlist")||document.body;const list=[...new Set([...scope.querySelectorAll("[data-ci]")].map(x=>x.dataset.ci))];openCard(cc.dataset.ci,list);return}
+  const cc=e.target.closest("[data-ci]");if(cc){const scope=cc.closest("tbody,.decklist,.issues,.archlist,.cgrid-wrap")||document.body;const list=[...new Set([...scope.querySelectorAll("[data-ci]")].map(x=>x.dataset.ci))];openCard(cc.dataset.ci,list);return}
   const fa=e.target.closest("[data-fold-all]");if(fa){const c=fa.dataset.foldAll==="1";S.folds=S.folds||{};document.querySelectorAll("#view .fold-head").forEach(h=>{const p=h.parentElement;p.classList.toggle("collapsed",c);h.setAttribute("aria-expanded",String(!c));S.folds[foldKey(p)]=c});save();return}
   if(e.target.closest("#stripToggle")){S.stripMini=!(S.stripMini!==false);save();renderShell();return}
   const wb=e.target.closest("[data-win]");if(wb){S.win=wb.dataset.win;S.meta=defaultMeta();save();render();toast(`Periodo: ${WIN_LAB[S.win]} · field atteso aggiornato`);return}
   const tab=e.target.closest("[data-tab]");if(tab){go(tab.dataset.tab);return}
   const g=e.target.closest("[data-go]");if(g){go(g.dataset.go);return}
   const gm=e.target.closest("[data-go-mu]");if(gm){S.sel=gm.dataset.goMu;go("matchup");return}
+  const cv=e.target.closest("[data-cv]");if(cv){S.cardView=cv.dataset.cv;save();render();return}
   const lo=e.target.closest("[data-lab-open]");if(lo){S.current=lo.dataset.labOpen;S.labNew=false;S.tab="lab";save();render();window.scrollTo({top:0});return}
   const act=e.target.closest("[data-act]");if(!act)return;const a=act.dataset.act;
   if(a==="labnew"){S.labNew=true;S.tab="lab";save();render();window.scrollTo({top:0});$("#lab_idea")?.focus();return}

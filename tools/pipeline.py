@@ -5,7 +5,7 @@ Uso:
   python3 -I pipeline.py fetch --work DIR [--prev-bundle FILE] [--prev-imgidx FILE] [--glossary FILE]
       Scarica meta, champion, archetipi (head-to-head, consenso, liste vincenti), ultimo major,
       tutte le carte dell'Index e le immagini delle carte nuove. Scrive in DIR:
-      bundle.json, imgidx.json, cards/sNN.webp (solo fogli nuovi), weekly_input.json.
+      bundle.json, imgidx.json, cards/sNN.webp e miniature cards/tNN.webp (solo fogli nuovi), weekly_input.json.
   python3 -I pipeline.py build --work DIR --template FILE --out FILE [--weekly FILE]
       Inserisce bundle.json (piu' il commento settimanale in markdown, se dato) nel template.
 
@@ -352,8 +352,33 @@ def build_images(work, cards, prev_idx):
         f = f"cards/s{s:02d}.webp"
         sheet.save(f"{work}/{f}", "WEBP", quality=70, method=6)
         written.append(f)
+        written.append(make_thumb(work, s, sheet))
     log(f"immagini: {len(new)} carte nuove in {written}")
     return idx, written
+
+
+THUMB = 0.4  # miniature per la griglia dell'app: 120x168 per carta
+
+
+def make_thumb(work, s, sheet=None):
+    """Foglio di miniature cards/tNN.webp (stessa disposizione di sNN, 40%): la griglia dell'app pesa ~15 volte meno."""
+    from PIL import Image
+    sheet = sheet or Image.open(f"{work}/cards/s{s:02d}.webp").convert("RGB")
+    t = sheet.resize((round(sheet.width * THUMB), round(sheet.height * THUMB)), Image.LANCZOS)
+    f = f"cards/t{s:02d}.webp"
+    t.save(f"{work}/{f}", "WEBP", quality=62, method=6)
+    return f
+
+
+def cmd_thumbs(a):
+    """Rigenera tutte le miniature dai fogli cards/sNN.webp presenti in --work."""
+    out = []
+    for n in sorted(os.listdir(f"{a.work}/cards")):
+        m = re.fullmatch(r"s(\d+)\.webp", n)
+        if m:
+            out.append(make_thumb(a.work, int(m.group(1))))
+    log(f"miniature: {len(out)} fogli")
+    print(json.dumps(out))
 
 
 def card_rows(cards, idx, sheets_count, glossary, cons):
@@ -990,5 +1015,7 @@ if __name__ == "__main__":
     b.add_argument("--template", required=True)
     b.add_argument("--out", required=True)
     b.add_argument("--weekly")
+    t = sp.add_parser("thumbs")
+    t.add_argument("--work", required=True)
     a = ap.parse_args()
-    {"fetch": cmd_fetch, "build": cmd_build, "social": cmd_social}[a.cmd](a)
+    {"fetch": cmd_fetch, "build": cmd_build, "social": cmd_social, "thumbs": cmd_thumbs}[a.cmd](a)
