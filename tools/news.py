@@ -367,14 +367,14 @@ def _tight(card, thr=70, frac=0.6):
     return card.crop((int(cols[0]), int(rows[0]), int(cols[-1]) + 1, int(rows[-1]) + 1))
 
 
-def _cards(P, W, H, src, boxes, label, emo, subtitle, source, pad=0.0, work=None):
+def _cards(P, W, H, src, boxes, label, emo, subtitle, source, pad=0.0, work=None, tight=True):
     """Carte grandi e leggibili (1 al centro; 2 affiancate; 3-4 su due righe), artwork della prima carta
     sfocato dietro, titolo con emoji (es. 🔥 SPOILER ALERT 🔥, 🚫 BAN LIST 🚫)."""
     from PIL import Image, ImageDraw, ImageFilter
     story = H > 1500
     from PIL import ImageOps
     cards = [src.crop(b) for b in boxes]
-    if pad:  # carta ritagliata stretta sulla cornice colorata
+    if pad and tight:  # carta ritagliata stretta sulla cornice colorata
         cards = [_tight(c) for c in cards]
     # carte piccole (es. catture da video): super-resolution x2 prima di ingrandirle
     cards = [_super_res(c, work) if c.width < 650 else c for c in cards]
@@ -468,7 +468,7 @@ def render(work, man):
                     continue
                 if boxes:
                     label, emo = TITLES[k]
-                    out_im = _cards(P, W, H, src, boxes, label, emo, it.get("subtitle", ""), it["source"], it.get("card_pad", 0.0), work)
+                    out_im = _cards(P, W, H, src, boxes, label, emo, it.get("subtitle", ""), it["source"], it.get("card_pad", 0.0), work, it.get("card_tight", True))
                 else:
                     out_im = _frame(P, W, H, src, kicker, it["source"], 0, 400 if kind == "story" else 130)
                 out = os.path.join(work, f"{it['id']}-{n}-{kind}.jpg")
