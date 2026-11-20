@@ -438,6 +438,11 @@ def _spoiler(P, W, H, src, box, subtitle, source):
     return _cards(P, W, H, src, [box], "SPOILER ALERT", "🔥", subtitle, source)
 
 
+def _per_image(v, n):
+    """Opzione valida per tutto il messaggio (valore) o per singola immagine ({"N": valore})."""
+    return v.get(str(n), True) if isinstance(v, dict) else v
+
+
 def render(work, man):
     from PIL import Image
     P = _pipeline()
@@ -468,7 +473,7 @@ def render(work, man):
                     continue
                 if boxes:
                     label, emo = TITLES[k]
-                    out_im = _cards(P, W, H, src, boxes, label, emo, it.get("subtitle", ""), it["source"], it.get("card_pad", 0.0), work, it.get("card_tight", True))
+                    out_im = _cards(P, W, H, src, boxes, label, emo, it.get("subtitle", ""), it["source"], it.get("card_pad", 0.0), work, _per_image(it.get("card_tight", True), n))
                 else:
                     out_im = _frame(P, W, H, src, kicker, it["source"], 0, 400 if kind == "story" else 130)
                 out = os.path.join(work, f"{it['id']}-{n}-{kind}.jpg")
