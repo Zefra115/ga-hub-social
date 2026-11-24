@@ -50,16 +50,34 @@ def fetch_meta():
     h = get(GAS + "/meta", min_size=50000)
     t = text(h)
     m = re.search(r"Current season · ([^·|]+?) · (\d+) events · (\d+) decks · (\d+) non-mirror matches", t)
-    snap = dict(season=m.group(1).strip(), events=int(m.group(2)), decks=int(m.group(3)), matches=int(m.group(4)),
-                date=datetime.date.today().isoformat())
+    if m:
+        snap = dict(season=m.group(1).strip(), events=int(m.group(2)), decks=int(m.group(3)), matches=int(m.group(4)),
+                    date=datetime.date.today().isoformat())
+    else:  # layout 2026-11: "The | <season> | meta | 10,147 | decks | 25,143 | matches | 481 | events"
+        m = re.search(r"\| The \| ([^|]+?) \| meta \| ([\d,]+) \| decks \| ([\d,]+) \| matches \| ([\d,]+) \| events", t)
+        num = lambda x: int(x.replace(",", ""))
+        snap = dict(season=m.group(1).strip(), events=num(m.group(4)), decks=num(m.group(2)), matches=num(m.group(3)),
+                    date=datetime.date.today().isoformat())
     cm = re.search(r"\| ([A-Z]{3}) \| " + re.escape(snap["season"]) + r" \|", t)
     snap["code"] = cm.group(1) if cm else SEASON_CODES.get(snap["season"], "")
     rows = []
     for r in re.finditer(r"\| (\d+) \| ([A-Z][^|]+?) \| (Tier \d) \| (\d+) \| ([\d.]+)% \| (\d+)-(\d+)-(\d+) \| ([\d.]+)% \| ([\d.]+)%", t):
         rows.append(dict(n=r.group(2).strip(), tier=r.group(3), decks=int(r.group(4)), share=float(r.group(5)),
                          wr=float(r.group(9)), adj=float(r.group(10))))
+    if not rows:  # layout 2026-11: schede <li data-archetype ... data-tier ...>
+        for li in re.finditer(r'<li\s+data-archetype="[^"]*"\s+data-decks="(\d+)"\s+data-tier="(\d)"\s+data-share="([\d.]+)"\s+data-wr="([\d.]+)"\s+data-ev="([\d.]+)"[^>]*?title="([^"]*)"[^>]*>\s*<a href="/meta/archetypes/([^"]+)"', h):
+            dk = int(li.group(1))
+            if dk < 10:
+                continue
+            am = re.search(r"adjusted win rate ([\d.]+)%", li.group(6))
+            name = urllib.parse.unquote(html.unescape(li.group(7))).strip()
+            rows.append(dict(n=name, tier="Tier " + li.group(2), decks=dk, share=round(float(li.group(3)), 1),
+                             wr=round(float(li.group(4)), 1), adj=float(am.group(1)) if am else round(float(li.group(5)), 1)))
+        rows.sort(key=lambda r: -r["decks"])
     mv = []
     seg = t[t.find("Meta movers"):t.find("Archetype breakdown")]
+    if "Meta movers" not in t and "| Rising |" in t:
+        seg = t[t.find("| Rising |"):t.find("| All time |")].replace("| Rising |", "| Gaining |").replace("| Falling |", "| Losing |")
     for side in ("Gaining", "Losing"):
         part = seg[seg.find(side):] if side == "Losing" else seg[seg.find("Gaining"):seg.find("Losing")]
         for r in re.finditer(r"\| ([A-Z][^|]+?) \| ([\d.]+)% -> ([\d.]+)% \| ([+\-−][\d.]+)", part):
@@ -76,12 +94,16 @@ def fetch_champions():
     for s in slugs:
         h = get(f"{GAS}/champions?c={s}", min_size=20000)
         t = text(h)
-        head = re.search(r"Champion Archive \| ([^|]+) \| ([^|]+?) · [^|]+ \| ([\d,]+) \| Decks Tracked \| ([\d.]+)% \| Win Rate", t)
+        head = re.search(r"Champion Archive \| ([^|]+) \| ([^|]+?) · [^|]+ \| ([\d,]+) \| Decks Tracked \| ([\d.]+)% \| Win Rate", t) \
+            or re.search(r"\| ([^|]+?) \| ([^|]+?) \| · [^|]+? season \| ([\d,]+) \| decks tracked \| ([\d.]+)% \| win rate", t)
         if not head:
             log("  champion non leggibile", s)
             continue
         seg = t[t.find("Decks Played"):]
         rows = re.findall(r"\| (\d+) \| ([A-Z][^|]+?) \| (\d+) \| (\d+)% \| ([\d.]+)%", seg)
+        if not rows:  # layout 2026-11
+            seg = t[t.find("Decks played"):]
+            rows = re.findall(r"\| (\d+) \| ([A-Z][^|]+?) \| (\d+) \| decks \| (\d+)% \| of [^|]+ decks \| ([\d.]+)% \| win rate", seg)
         links = [urllib.parse.unquote(html.unescape(l)) for l in re.findall(r'href="/meta/archetypes/([^"?]+)\?champion=', h)]
         out.append(dict(name=head.group(1).strip(), slug=s, cls=head.group(2).strip(), decks=int(head.group(3).replace(",", "")),
                         wr=float(head.group(4)),
@@ -100,6 +122,16 @@ def parse_archetype(h):
     pm = lambda s: [[m.group(1).strip(), float(m.group(2)), float(m.group(3))] for m in re.finditer(r"\| ([^|]+?) \| In \| ([\d.]+)% \| WR \| ([\d.]+)%", s)]
     pa = lambda s: [[m.group(1).strip(), float(m.group(2)), float(m.group(3)), float(m.group(4))] for m in re.finditer(r"\| ([^|]+?) \| In \| ([\d.]+)% \| Avg \| ([\d.]+)× \| WR \| ([\d.]+)%", s)]
     mat, main, side = sec("| Material Deck | ·", "| Main Deck | ·"), sec("| Main Deck | ·", "| Sideboard | ·"), sec("| Sideboard | ·", "Recent placements")
+    if not (pm(mat) or pa(main)) and "| Material Deck |" in t:  # layout 2026-11
+        def sec2(a, b):
+            s = t.find(a)
+            e = t.find(b, s + 5) if s >= 0 else -1
+            return t[s:e if e > 0 else s + 20000] if s >= 0 else ""
+        mat2, main2 = sec2("| Material Deck |", "| Main Deck |"), sec2("| Main Deck |", "| Sideboard |")
+        side2 = sec2("| Sideboard |", " matches |")
+        pm2 = lambda s: [[m.group(2).strip(), float(m.group(1)), float(m.group(3))] for m in re.finditer(r"\| ([\d.]+)% \| ([^|]+?) \| ([\d.]+)% \| win rate", s)]
+        pa2 = lambda s: [[m.group(3).strip(), float(m.group(1)), float(m.group(2)), float(m.group(4))] for m in re.finditer(r"\| ([\d.]+)% \| ([\d.]+)× \| ([^|]+?) \| ([\d.]+)% \| win rate", s)]
+        pm, pa, mat, main, side = pm2, pa2, mat2, main2, side2
     h2h = {}
     k = t.find("ELO Δ/match |")
     if k >= 0:
@@ -201,6 +233,19 @@ def fetch_events(days, cache, today):
     h = get(GAS + "/", min_size=50000)
     t0 = datetime.date.fromisoformat(today)
     rows = re.findall(r'<tr data-event-id="(\d+)"[^>]*>\s*<td>([\d-]+)</td>\s*<td><a href="/events/\d+">(.*?)</a></td>.*?cat-tag-([a-z-]+)".*?<td class="num">(\d+)</td>', h, re.S)
+    if not rows:  # layout 2026-11: <section class="hm-day"> con <b>Nov 22</b> e <li class="hm-row">
+        for sec in re.split(r'<section class="hm-day">', h)[1:]:
+            dm = re.search(r'hm-dayhead">\s*<b>([A-Z][a-z]{2}) (\d+)</b>', sec)
+            if not dm:
+                continue
+            d = datetime.datetime.strptime(f"{dm.group(1)} {dm.group(2)} {t0.year}", "%b %d %Y").date()
+            if d > t0:
+                d = d.replace(year=t0.year - 1)
+            for li in re.findall(r'<li class="hm-row"(.*?)</li>', sec, re.S):
+                g = lambda p: (re.search(p, li, re.S) or [None, None])[1]
+                eid, name, cat, size = g(r'data-event-id="(\d+)"'), g(r'class="hm-name"[^>]*>(.*?)</a>'), g(r'data-cat="([a-z-]+)"'), g(r'hm-pl"><b>(\d+)</b>')
+                if eid and name and size:
+                    rows.append((eid, d.isoformat(), name, cat or "", size))
     out = {}
     for eid, date, name, cat, size in rows:
         age = (t0 - datetime.date.fromisoformat(date)).days
