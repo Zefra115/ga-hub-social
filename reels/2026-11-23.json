@@ -90,8 +90,8 @@
    "type": "event",
    "bars": 2,
    "kicker": "Biggest event of the week",
-   "event": "Celestial Showdown Regional",
-   "detail": "165 players · Apex Player's Guild",
+   "event": "Celestial Showdown",
+   "detail": "Regional · 165 players · Apex Player's Guild",
    "winner": "Quarax",
    "deck": "Wind Byakko",
    "cards": [
